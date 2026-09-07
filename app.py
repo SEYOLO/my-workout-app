@@ -27,11 +27,15 @@ st.markdown("""
     .sub-title { font-size: 0.88rem; color: #64748B; text-align: center; margin-bottom: 1.5rem; }
     .prev-record-card {
         background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25);
-        border-radius: 12px; padding: 12px 16px; margin-bottom: 14px;
+        border-radius: 12px; padding: 12px 16px; margin-bottom: 10px;
         display: flex; align-items: center; justify-content: space-between;
     }
     .prev-record-title { font-size: 0.85rem; color: #38BDF8; font-weight: 700; }
     .prev-record-value { font-size: 0.95rem; color: #F8FAFC; font-weight: 800; }
+    .guide-box {
+        background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3);
+        border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.85rem; color: #FBBF24;
+    }
     div[data-testid="stForm"], div.stExpander {
         background: #11131F !important; border: 1px solid #1E293B !important;
         border-radius: 16px !important; padding: 18px !important;
@@ -74,7 +78,25 @@ def load_workouts():
 
 def save_data(df, filename): df.to_csv(filename, index=False)
 
-# 3. 부위별 세부 카테고리 DB (동적 추천 조합용)
+# 3. 헬린이를 위한 운동 가이드 DB (자세 팁 & 가이드 영상)
+EXERCISE_TIPS = {
+    "벤치프레스": {"tip": "견갑(날개뼈)을 고정하고 바벨을 가슴 명치 살짝 위에 밀착시킵니다.", "url": "https://www.youtube.com/results?search_query=벤치프레스+자세"},
+    "인클라인 벤치프레스": {"tip": "벤치 각도를 30도 정도로 맞춰 윗가슴 자극에 집중합니다.", "url": "https://www.youtube.com/results?search_query=인클라인+벤치프레스+자세"},
+    "덤벨 벤치프레스": {"tip": "가슴 근육을 최대한 이완하며 가동범위를 길게 가져갑니다.", "url": "https://www.youtube.com/results?search_query=덤벨+벤치프레스+자세"},
+    "체스트 프레스 머신": {"tip": "의자 높이를 조절해 손잡이가 가슴 중앙에 오도록 합니다.", "url": "https://www.youtube.com/results?search_query=체스트프레스머신+자세"},
+    "펙덱 플라이 머신": {"tip": "팔꿈치를 살짝 구부린 상태를 유지하고 가슴을 모아줍니다.", "url": "https://www.youtube.com/results?search_query=펙덱플라이+자세"},
+    "데드리프트": {"tip": "허리가 굽지 않도록 척추 중립을 지키고 바벨을 몸에 붙여 올립니다.", "url": "https://www.youtube.com/results?search_query=컨벤셔널+데드리프트+자세"},
+    "바벨로우": {"tip": "상체를 45도 숙이고 바벨을 배꼽 방향으로 당겨 등 하부를 자극합니다.", "url": "https://www.youtube.com/results?search_query=바벨로우+자세"},
+    "렛풀다운": {"tip": "가슴을 열어주고 바를 쇄골 방향으로 당겨 등에 자극을 줍니다.", "url": "https://www.youtube.com/results?search_query=렛풀다운+자세"},
+    "시티드 케이블 로우": {"tip": "상체가 뒤로 과도하게 젖혀지지 않도록 등 힘으로 당깁니다.", "url": "https://www.youtube.com/results?search_query=시티드케이블로우+자세"},
+    "스쿼트": {"tip": "무릎이 고관절과 함께 접히며 복압을 유지하고 수평 밑으로 내려갑니다.", "url": "https://www.youtube.com/results?search_query=스쿼트+자세"},
+    "레그프레스": {"tip": "발판 위 발 위치에 따라 자극 부위가 달라집니다. 무릎을 완전히 펴지 마세요.", "url": "https://www.youtube.com/results?search_query=레그프레스+자세"},
+    "오버헤드 프레스": {"tip": "복근과 엉덩이에 힘을 주고 바벨을 머리 위 직선으로 밀어 올립니다.", "url": "https://www.youtube.com/results?search_query=오버헤드프레스+자세"},
+    "사이드 레터럴 레이즈": {"tip": "손목이 아닌 팔꿈치를 들어 올린다는 느낌으로 측면 어깨를 사용합니다.", "url": "https://www.youtube.com/results?search_query=사이드레터럴레이즈+자세"},
+    "트라이셉스 케이블 푸쉬다운": {"tip": "팔꿈치를 옆구리에 고정하고 아래로 밀어 삼두를 삼각 압축합니다.", "url": "https://www.youtube.com/results?search_query=케이블푸쉬다운+자세"},
+    "바벨 컬": {"tip": "상체 반동을 줄이고 팔꿈치를 고정한 채 이두의 힘으로 끌어올립니다.", "url": "https://www.youtube.com/results?search_query=바벨컬+자세"}
+}
+
 EXERCISE_POOL = {
     "가슴_메인": ["벤치프레스", "인클라인 벤치프레스", "덤벨 벤치프레스", "인클라인 덤벨 벤치프레스"],
     "가슴_서브": ["체스트 프레스 머신", "펙덱 플라이 머신", "케이블 크로스오버", "딥스", "덤벨 플라이"],
@@ -91,29 +113,16 @@ EXERCISE_POOL = {
 
 ALL_EXERCISES = list(set(sum(EXERCISE_POOL.values(), [])))
 
-# 동적 추천 함수 (매번 무작위 조합 생성)
 def generate_dynamic_routine(routine_type):
-    random.seed(time.time()) # 랜덤 시드 초기화
+    random.seed(time.time())
     if routine_type == "가슴/삼두 DAY":
-        main = random.sample(EXERCISE_POOL["가슴_메인"], 2)
-        sub = random.sample(EXERCISE_POOL["가슴_서브"], 2)
-        arm = random.sample(EXERCISE_POOL["삼두"], 1)
-        return main + sub + arm
+        return random.sample(EXERCISE_POOL["가슴_메인"], 2) + random.sample(EXERCISE_POOL["가슴_서브"], 2) + random.sample(EXERCISE_POOL["삼두"], 1)
     elif routine_type == "등/이두 DAY":
-        main = random.sample(EXERCISE_POOL["등_메인"], 2)
-        sub = random.sample(EXERCISE_POOL["등_서브"], 2)
-        arm = random.sample(EXERCISE_POOL["이두"], 1)
-        return main + sub + arm
+        return random.sample(EXERCISE_POOL["등_메인"], 2) + random.sample(EXERCISE_POOL["등_서브"], 2) + random.sample(EXERCISE_POOL["이두"], 1)
     elif routine_type == "하체/복근 DAY":
-        main = random.sample(EXERCISE_POOL["하체_메인"], 2)
-        sub = random.sample(EXERCISE_POOL["하체_서브"], 2)
-        abs_ex = random.sample(EXERCISE_POOL["복근/유산소"], 1)
-        return main + sub + abs_ex
+        return random.sample(EXERCISE_POOL["하체_메인"], 2) + random.sample(EXERCISE_POOL["하체_서브"], 2) + random.sample(EXERCISE_POOL["복근/유산소"], 1)
     elif routine_type == "어깨/유산소 DAY":
-        main = random.sample(EXERCISE_POOL["어깨_메인"], 2)
-        sub = random.sample(EXERCISE_POOL["어깨_서브"], 2)
-        cardio = random.sample([x for x in EXERCISE_POOL["복근/유산소"] if "런닝" in x or "계단" in x or "사이클" in x], 1)
-        return main + sub + cardio
+        return random.sample(EXERCISE_POOL["어깨_메인"], 2) + random.sample(EXERCISE_POOL["어깨_서브"], 2) + random.sample([x for x in EXERCISE_POOL["복근/유산소"] if "런닝" in x or "계단" in x or "사이클" in x], 1)
     return []
 
 if "user_id" not in st.session_state: st.session_state.user_id = None
@@ -183,7 +192,7 @@ else:
     
     workouts_df = load_workouts()
     
-    # TAB 1: 운동 기록 작성
+    # TAB 1: 운동 기록 작성 (헬린이 자세 가이드 통합)
     with tab_workout:
         st.subheader("오늘의 운동")
         today_date = st.date_input("운동 날짜", datetime.now())
@@ -193,14 +202,12 @@ else:
         
         selected_exercises = []
         if routine_type in ["가슴/삼두 DAY", "등/이두 DAY", "하체/복근 DAY", "어깨/유산소 DAY"]:
-            # 추천 버튼 눌렀을 때 또는 세션 초기화 시 다른 조합 추천
             if "random_routine" not in st.session_state or st.session_state.get("current_routine_type") != routine_type:
                 st.session_state.random_routine = generate_dynamic_routine(routine_type)
                 st.session_state.current_routine_type = routine_type
                 
             col_rec1, col_rec2 = st.columns([3, 1])
-            with col_rec1:
-                st.info(f"💡 **[{routine_type}]** 오늘의 추천 무작위 조합입니다.")
+            with col_rec1: st.info(f"💡 **[{routine_type}]** 오늘의 추천 무작위 조합입니다.")
             with col_rec2:
                 if st.button("🎲 다시 추천"):
                     st.session_state.random_routine = generate_dynamic_routine(routine_type)
@@ -223,6 +230,17 @@ else:
                 workout_entries = []
                 for ex in selected_exercises:
                     st.write(f"🏋️ **{ex}**")
+                    
+                    # 헬린이를 위한 1줄 핵심 가이드 & 유튜브 팁 가이드
+                    if ex in EXERCISE_TIPS:
+                        tip_info = EXERCISE_TIPS[ex]
+                        st.markdown(f"""
+                        <div class="guide-box">
+                            📌 <b>자세 팁:</b> {tip_info['tip']} <a href="{tip_info['url']}" target="_blank" style="color: #38BDF8; margin-left: 8px; font-weight: 700; text-decoration: none;">[▶️ 자세 영상 가이드]</a>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # 지난 기록 자동 안내
                     ex_past = my_past_workouts[my_past_workouts["exercise"] == ex]
                     if not ex_past.empty:
                         max_w = ex_past["weight"].max()
