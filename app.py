@@ -18,18 +18,25 @@ PROFILE_DIR = "profile_pics"
 if not os.path.exists(PROFILE_DIR):
     os.makedirs(PROFILE_DIR)
 
-# Minimalistic Modern Dark UI + Responsive Segmented Control
-st.markdown("""
+# 스마트폰 홈 화면 전용 아이콘 URL (원하는 고화질 이미지 링크로 변경 가능)
+APP_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
+
+# PWA / 홈 화면 앱 아이콘 메타 태그 & Responsive UI CSS
+st.markdown(f"""
+<head>
+    <link rel="apple-touch-icon" href="{APP_ICON_URL}">
+    <link rel="icon" sizes="192x192" href="{APP_ICON_URL}">
+</head>
 <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-    * { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }
+    * {{ font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }}
     
-    .stApp {
+    .stApp {{
         background: #0D0E12;
         color: #E2E8F0;
-    }
+    }}
 
-    .brand-title {
+    .brand-title {{
         font-size: 2.2rem;
         font-weight: 800;
         letter-spacing: -0.05em;
@@ -37,16 +44,16 @@ st.markdown("""
         text-align: center;
         margin-top: 1rem;
         margin-bottom: 0.2rem;
-    }
-    .brand-sub {
+    }}
+    .brand-sub {{
         font-size: 0.85rem;
         color: #64748B;
         text-align: center;
         margin-bottom: 2rem;
-    }
+    }}
 
     /* 탭 메뉴 균등 분할 레이아웃 */
-    div[data-baseweb="tab-list"] {
+    div[data-baseweb="tab-list"] {{
         display: flex !important;
         width: 100% !important;
         background-color: #14161D !important;
@@ -55,9 +62,9 @@ st.markdown("""
         gap: 2px !important;
         border: 1px solid #222634 !important;
         margin-bottom: 1.5rem !important;
-    }
+    }}
 
-    button[data-baseweb="tab"] {
+    button[data-baseweb="tab"] {{
         flex: 1 1 0% !important;
         width: 100% !important;
         text-align: center !important;
@@ -70,24 +77,24 @@ st.markdown("""
         border: none !important;
         background: transparent !important;
         transition: all 0.2s ease-in-out !important;
-    }
+    }}
 
-    button[aria-selected="true"] {
+    button[aria-selected="true"] {{
         background: #1E293B !important;
         color: #38BDF8 !important;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
-    }
+    }}
 
     /* 단일 폼 박스 */
-    div[data-testid="stForm"] {
+    div[data-testid="stForm"] {{
         background: #14161D !important;
         border: 1px solid #222634 !important;
         border-radius: 16px !important;
         padding: 22px !important;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
-    }
+    }}
 
-    .stButton > button, div[data-testid="stForm"] button {
+    .stButton > button, div[data-testid="stForm"] button {{
         width: 100% !important;
         background: #2563EB !important;
         color: #FFFFFF !important;
@@ -97,29 +104,29 @@ st.markdown("""
         font-weight: 700 !important;
         font-size: 0.98rem !important;
         transition: all 0.2s ease !important;
-    }
-    .stButton > button:hover { background: #1D4ED8 !important; }
+    }}
+    .stButton > button:hover {{ background: #1D4ED8 !important; }}
 
-    .prev-record-card {
+    .prev-record-card {{
         background: rgba(56, 189, 248, 0.05);
         border: 1px solid rgba(56, 189, 248, 0.2);
         border-radius: 10px; padding: 10px 14px; margin-bottom: 10px;
         display: flex; align-items: center; justify-content: space-between;
-    }
-    .prev-record-title { font-size: 0.82rem; color: #38BDF8; font-weight: 600; }
-    .prev-record-value { font-size: 0.9rem; color: #F8FAFC; font-weight: 700; }
+    }}
+    .prev-record-title {{ font-size: 0.82rem; color: #38BDF8; font-weight: 600; }}
+    .prev-record-value {{ font-size: 0.9rem; color: #F8FAFC; font-weight: 700; }}
     
-    .guide-box {
+    .guide-box {{
         background: rgba(245, 158, 11, 0.05);
         border: 1px solid rgba(245, 158, 11, 0.2);
         border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.83rem; color: #FBBF24;
-    }
+    }}
 
-    @media (max-width: 640px) {
-        .block-container { padding-left: 0.6rem !important; padding-right: 0.6rem !important; padding-top: 0.8rem !important; }
-        .brand-title { font-size: 1.7rem; }
-        button[data-baseweb="tab"] { font-size: 0.75rem !important; padding: 8px 0px !important; }
-    }
+    @media (max-width: 640px) {{
+        .block-container {{ padding-left: 0.6rem !important; padding-right: 0.6rem !important; padding-top: 0.8rem !important; }}
+        .brand-title {{ font-size: 1.7rem; }}
+        button[data-baseweb="tab"] {{ font-size: 0.75rem !important; padding: 8px 0px !important; }}
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -309,7 +316,6 @@ else:
         
     st.markdown("<div class='brand-title' style='margin-top:0; font-size:1.6rem;'>WORKOUT ⚡</div>", unsafe_allow_html=True)
     
-    # 균등 분할 세그먼트 메뉴 탭
     tab_workout, tab_timer, tab_feed, tab_calendar, tab_friends, tab_profile = st.tabs([
         "기록", "타이머", "피드", "달력", "팔로우", "프로필"
     ])
@@ -408,7 +414,7 @@ else:
                     save_data(workouts_df, WORKOUT_FILE)
                     st.success("성공적으로 저장되었습니다!")
 
-    # TAB 2: 세트 간 휴식 타이머 (중단 버튼 추가)
+    # TAB 2: 세트 간 휴식 타이머
     with tab_timer:
         st.subheader("⏱️ 휴식 타이머")
         tc1, tc2, tc3, tc4 = st.columns(4)
@@ -574,7 +580,6 @@ else:
         if not user_idx.empty:
             curr_row = users_df.loc[user_idx[0]]
             
-            # 프로필 수정 폼
             with st.form("edit_profile_form"):
                 st.write("### 프로필 정보 수정")
                 
@@ -597,7 +602,6 @@ else:
                             img.save(os.path.join(PROFILE_DIR, p_name))
                             users_df.loc[user_idx[0], "profile_pic"] = p_name
                             
-                        # 운동 기록 파일의 닉네임 변경 반영
                         workouts_df.loc[workouts_df["user_id"] == st.session_state.user_id, "nickname"] = mod_nick
                         save_data(workouts_df, WORKOUT_FILE)
                         save_data(users_df, USERS_FILE)
