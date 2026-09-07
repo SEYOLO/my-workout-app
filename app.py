@@ -21,7 +21,7 @@ if not os.path.exists(PROFILE_DIR):
 
 APP_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
 
-# 모바일 대응, 프로필 원형 아바타 및 UI CSS
+# 모바일 대응 및 프로필 UI CSS
 st.markdown(f"""
 <head>
     <link rel="apple-touch-icon" href="{APP_ICON_URL}">
@@ -93,21 +93,15 @@ st.markdown(f"""
         margin-top: 0.2rem;
         margin-bottom: 0.2rem;
     }}
-    .brand-sub {{
-        font-size: 0.8rem;
-        color: #64748B;
-        text-align: center;
-        margin-bottom: 1.2rem;
-    }}
 
-    /* 세로/가로 비율 보정 및 깔끔한 원형 프로필 */
+    /* 프로필 원형 아바타 규격 및 보정 */
     .profile-avatar {{
-        width: 58px;
-        height: 58px;
+        width: 60px;
+        height: 60px;
         border-radius: 50%;
         object-fit: cover;
         border: 2px solid #38BDF8;
-        box-shadow: 0 2px 8px rgba(56, 189, 248, 0.2);
+        box-shadow: 0 2px 8px rgba(56, 189, 248, 0.25);
     }}
     .profile-avatar-small {{
         width: 38px;
@@ -115,6 +109,14 @@ st.markdown(f"""
         border-radius: 50%;
         object-fit: cover;
         border: 1.5px solid #38BDF8;
+    }}
+    .profile-expanded-img {{
+        width: 100%;
+        max-width: 320px;
+        border-radius: 14px;
+        border: 1px solid #38BDF8;
+        margin-top: 8px;
+        margin-bottom: 8px;
     }}
 
     h1 {{ font-size: 1.6rem !important; }}
@@ -127,9 +129,9 @@ st.markdown(f"""
         color: #FFFFFF !important;
         border: none !important;
         border-radius: 10px !important;
-        padding: 10px 12px !important;
+        padding: 8px 10px !important;
         font-weight: 700 !important;
-        font-size: 0.9rem !important;
+        font-size: 0.85rem !important;
         transition: all 0.2s ease !important;
     }}
     .stButton > button:hover {{ background: #1D4ED8 !important; }}
@@ -208,11 +210,11 @@ def load_workouts():
 
 def save_data(df, filename): df.to_csv(filename, index=False)
 
-# 이미지 EXIF 자동 회전 보정 처리 함수
+# EXIF 회전 보정 이미지 저장
 def save_profile_image(uploaded_file, filename):
     img = Image.open(uploaded_file)
     try:
-        img = ImageOps.exif_transpose(img) # 스마트폰 세로/가로 메타데이터 강제 보정
+        img = ImageOps.exif_transpose(img)
     except Exception:
         pass
     img.save(os.path.join(PROFILE_DIR, filename))
@@ -384,6 +386,7 @@ if "user_id" not in st.session_state: st.session_state.user_id = None
 if "nickname" not in st.session_state: st.session_state.nickname = None
 if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
 if "timer_running" not in st.session_state: st.session_state.timer_running = False
+if "show_my_pic" not in st.session_state: st.session_state.show_my_pic = False
 
 # --- [로그인 / 회원가입 랜딩] ---
 if st.session_state.user_id is None:
@@ -437,7 +440,7 @@ if st.session_state.user_id is None:
                     pic_filename = ""
                     if uploaded_pic is not None:
                         pic_filename = f"{new_id}_{int(time.time())}.png"
-                        save_profile_image(uploaded_pic, pic_filename) # EXIF 회전 보정 저장
+                        save_profile_image(uploaded_pic, pic_filename)
                         
                     new_user = pd.DataFrame([{
                         "user_id": new_id, "password": new_pw, 
@@ -459,10 +462,18 @@ else:
     prof_path = get_profile_path(st.session_state.user_id)
     prof_b64 = get_profile_base64(prof_path)
     
-    col_h1, col_h2 = st.columns([1, 3.5])
+    col_h1, col_h2 = st.columns([1.2, 3.8])
     with col_h1:
         if prof_b64:
             st.markdown(f'<img src="data:image/png;base64,{prof_b64}" class="profile-avatar">', unsafe_allow_html=True)
+            if not st.session_state.show_my_pic:
+                if st.button("🔍 프사 확대", key="btn_expand_my_pic"):
+                    st.session_state.show_my_pic = True
+                    st.rerun()
+            else:
+                if st.button("✖️ 접기", key="btn_collapse_my_pic"):
+                    st.session_state.show_my_pic = False
+                    st.rerun()
         else:
             st.write("👤")
             
@@ -473,6 +484,10 @@ else:
             st.session_state.user_id = None
             st.session_state.nickname = None
             st.rerun()
+            
+    # 원본 세로 확답 영역 토글
+    if st.session_state.show_my_pic and prof_b64:
+        st.markdown(f'<img src="data:image/png;base64,{prof_b64}" class="profile-expanded-img">', unsafe_allow_html=True)
         
     st.markdown("<div class='brand-title' style='margin-top:0.4rem;'>WORKOUT ⚡</div>", unsafe_allow_html=True)
     
@@ -852,7 +867,7 @@ else:
                         
                         if new_pic is not None:
                             p_name = f"{st.session_state.user_id}_{int(time.time())}.png"
-                            save_profile_image(new_pic, p_name) # EXIF 회전 보정 저장
+                            save_profile_image(new_pic, p_name)
                             users_df.loc[user_idx[0], "profile_pic"] = p_name
                             
                         workouts_df.loc[workouts_df["user_id"] == st.session_state.user_id, "nickname"] = mod_nick
