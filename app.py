@@ -20,7 +20,7 @@ if not os.path.exists(PROFILE_DIR):
 
 APP_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
 
-# 모바일 대응 및 다크 모드 CSS
+# 모바일 대응, 타이머 가로정렬 강제, 폰트 사이즈 최적화 CSS
 st.markdown(f"""
 <head>
     <link rel="apple-touch-icon" href="{APP_ICON_URL}">
@@ -40,7 +40,7 @@ st.markdown(f"""
     }}
 
     .block-container {{
-        padding-top: max(3.2rem, env(safe-area-inset-top)) !important;
+        padding-top: max(2.8rem, env(safe-area-inset-top)) !important;
         padding-bottom: max(2.0rem, env(safe-area-inset-bottom)) !important;
     }}
 
@@ -58,7 +58,7 @@ st.markdown(f"""
     }}
 
     .splash-logo {{
-        font-size: 2.8rem;
+        font-size: 2.5rem;
         font-weight: 900;
         letter-spacing: -0.06em;
         color: #F8FAFC;
@@ -66,7 +66,7 @@ st.markdown(f"""
     }}
 
     .splash-sub {{
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         color: #38BDF8;
         font-weight: 700;
         letter-spacing: 0.2em;
@@ -84,7 +84,7 @@ st.markdown(f"""
     }}
 
     .brand-title {{
-        font-size: 2rem;
+        font-size: 1.8rem;
         font-weight: 800;
         letter-spacing: -0.05em;
         color: #F8FAFC;
@@ -93,11 +93,16 @@ st.markdown(f"""
         margin-bottom: 0.2rem;
     }}
     .brand-sub {{
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         color: #64748B;
         text-align: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.2rem;
     }}
+
+    /* 모바일 헤더 폰트 크기 대폭 축소 */
+    h1 {{ font-size: 1.6rem !important; }}
+    h2 {{ font-size: 1.3rem !important; margin-top: 0.8rem !important; margin-bottom: 0.5rem !important; }}
+    h3 {{ font-size: 1.05rem !important; margin-top: 0.6rem !important; margin-bottom: 0.4rem !important; }}
 
     .stButton > button {{
         width: 100% !important;
@@ -105,12 +110,24 @@ st.markdown(f"""
         color: #FFFFFF !important;
         border: none !important;
         border-radius: 10px !important;
-        padding: 12px 16px !important;
+        padding: 10px 12px !important;
         font-weight: 700 !important;
-        font-size: 0.95rem !important;
+        font-size: 0.9rem !important;
         transition: all 0.2s ease !important;
     }}
     .stButton > button:hover {{ background: #1D4ED8 !important; }}
+
+    /* 모바일 타이머 가로 4분할 강제 정렬 스타일 */
+    div[data-testid="stHorizontalBlock"] {{
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 6px !important;
+    }}
+    div[data-testid="stHorizontalBlock"] > div {{
+        min-width: 0 !important;
+        flex: 1 1 0% !important;
+    }}
 
     .prev-record-card {{
         background: rgba(56, 189, 248, 0.05);
@@ -118,18 +135,18 @@ st.markdown(f"""
         border-radius: 10px; padding: 10px 14px; margin-bottom: 10px;
         display: flex; align-items: center; justify-content: space-between;
     }}
-    .prev-record-title {{ font-size: 0.82rem; color: #38BDF8; font-weight: 600; }}
-    .prev-record-value {{ font-size: 0.9rem; color: #F8FAFC; font-weight: 700; }}
+    .prev-record-title {{ font-size: 0.8rem; color: #38BDF8; font-weight: 600; }}
+    .prev-record-value {{ font-size: 0.88rem; color: #F8FAFC; font-weight: 700; }}
     
     .guide-box {{
         background: rgba(245, 158, 11, 0.05);
         border: 1px solid rgba(245, 158, 11, 0.2);
-        border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.83rem; color: #FBBF24;
+        border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.8rem; color: #FBBF24;
     }}
 
     @media (max-width: 640px) {{
-        .block-container {{ padding-left: 0.6rem !important; padding-right: 0.6rem !important; }}
-        .brand-title {{ font-size: 1.6rem; }}
+        .block-container {{ padding-left: 0.5rem !important; padding-right: 0.5rem !important; }}
+        .brand-title {{ font-size: 1.5rem; }}
     }}
 </style>
 
@@ -140,7 +157,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 2. DB 초기화 (follows.csv 컬럼에 status 추가)
+# 2. DB 초기화
 def init_db():
     if not os.path.exists(USERS_FILE):
         pd.DataFrame(columns=["user_id", "password", "nickname", "bio", "profile_pic"]).to_csv(USERS_FILE, index=False)
@@ -414,7 +431,7 @@ else:
     col_h1, col_h2 = st.columns([1, 4])
     with col_h1:
         if prof_path:
-            st.image(prof_path, width=50)
+            st.image(prof_path, width=45)
         else:
             st.write("👤")
     with col_h2:
@@ -426,7 +443,7 @@ else:
         st.session_state.nickname = None
         st.rerun()
         
-    st.markdown("<div class='brand-title' style='margin-top:0; font-size:1.6rem;'>WORKOUT ⚡</div>", unsafe_allow_html=True)
+    st.markdown("<div class='brand-title' style='margin-top:0;'>WORKOUT ⚡</div>", unsafe_allow_html=True)
     
     tab_workout, tab_timer, tab_feed, tab_calendar, tab_friends, tab_profile = st.tabs([
         "기록", "타이머", "피드", "달력", "팔로우", "프로필"
@@ -438,7 +455,7 @@ else:
     
     # TAB 1: 운동 기록 작성
     with tab_workout:
-        st.subheader("오늘의 운동 세팅")
+        st.markdown("### 오늘의 운동 세팅")
         today_date = st.date_input("운동 날짜", datetime.now())
         
         split_type = st.selectbox("Step 1. 루틴 방식 선택", ["선택 안함", "무분할 (전신 4대 운동)", "분할 운동 (부위 지정)", "자율 선택"])
@@ -457,7 +474,7 @@ else:
             selected_parts = st.multiselect("Step 2. 오늘 수행할 부위 선택 (복수 선택 가능)", available_parts)
             
             if selected_parts:
-                st.write("### Step 3. 부위별 세부 타겟 설정")
+                st.markdown("### Step 3. 부위별 세부 타겟 설정")
                 for p in selected_parts:
                     if p == "가슴":
                         target_options[p] = st.selectbox(f"[{p}] 세부 타겟", ["가슴 전체", "윗가슴 집중", "아랫가슴 집중"], key="target_가슴")
@@ -553,9 +570,9 @@ else:
                 save_data(workouts_df, WORKOUT_FILE)
                 st.success("성공적으로 저장되었습니다!")
 
-    # TAB 2: 휴식 타이머
+    # TAB 2: 휴식 타이머 (강제 가로 4분할 반영)
     with tab_timer:
-        st.subheader("⏱️ 휴식 타이머")
+        st.markdown("### ⏱️ 휴식 타이머")
         
         t_cols = st.columns(4)
         target_sec = 0
@@ -581,23 +598,22 @@ else:
             for remaining in range(target_sec, -1, -1):
                 if stop_btn or not st.session_state.timer_running:
                     st.session_state.timer_running = False
-                    timer_box.markdown("<h3 style='text-align:center; color:#EF4444;'>⏹️ 타이머가 중단되었습니다.</h3>", unsafe_allow_html=True)
+                    timer_box.markdown("<h3 style='text-align:center; color:#EF4444;'>⏹️ 타이머 중단됨</h3>", unsafe_allow_html=True)
                     break
                     
                 mins, secs = divmod(remaining, 60)
-                timer_box.markdown(f"<h1 style='text-align: center; color: #38BDF8; font-size: 3.8rem; font-weight: 800;'>{mins:02d}:{secs:02d}</h1>", unsafe_allow_html=True)
+                timer_box.markdown(f"<h1 style='text-align: center; color: #38BDF8; font-size: 3.2rem; font-weight: 800;'>{mins:02d}:{secs:02d}</h1>", unsafe_allow_html=True)
                 p_bar.progress(remaining / target_sec)
                 time.sleep(1)
                 
             if remaining == 0 and st.session_state.timer_running:
-                timer_box.markdown("<h1 style='text-align: center; color: #4ADE80; font-size: 1.8rem; font-weight: 700;'>🔥 휴식 끝! 다음 세트 시작!</h1>", unsafe_allow_html=True)
+                timer_box.markdown("<h2 style='text-align: center; color: #4ADE80;'>🔥 휴식 끝! 다음 세트 시작!</h2>", unsafe_allow_html=True)
                 st.session_state.timer_running = False
 
-    # TAB 3: 팔로우 피드 (승인된 팔로우만 노출)
+    # TAB 3: 팔로우 피드
     with tab_feed:
-        st.subheader("📱 팔로워 피드")
+        st.markdown("### 📱 팔로워 피드")
         
-        # 내가 팔로우하고 '승인(accepted)'을 받은 계정들
         accepted_followings = follows_df[
             (follows_df["follower_id"] == st.session_state.user_id) & 
             (follows_df["status"] == "accepted")
@@ -643,9 +659,9 @@ else:
         else:
             st.info("표시할 피드 기록이 없습니다.")
 
-    # TAB 4: 팔로워 출석 달력 (승인된 팔로우만 노출)
+    # TAB 4: 팔로워 출석 달력
     with tab_calendar:
-        st.subheader("📅 출석 달력")
+        st.markdown("### 📅 출석 달력")
         
         accepted_followings = follows_df[
             (follows_df["follower_id"] == st.session_state.user_id) & 
@@ -676,42 +692,40 @@ else:
         else:
             st.info("표시할 데이터가 없습니다.")
 
-    # TAB 5: 팔로우 승인제 요청/수락 및 친구 찾기
+    # TAB 5: 팔로우 승인제 관리 (폰트 크기 모바일 대응 축소)
     with tab_friends:
-        st.subheader("👥 팔로우 관리 & 요청 승인")
+        st.markdown("### 👥 팔로우 관리")
         
-        # 1. 나에게 온 팔로우 요청 관리
         pending_requests = follows_df[
             (follows_df["following_id"] == st.session_state.user_id) & 
             (follows_df["status"] == "pending")
         ]
         
         if not pending_requests.empty:
-            st.warning(f"🔔 **나에게 온 팔로우 요청 ({len(pending_requests)}건)**")
+            st.warning(f"🔔 **팔로우 요청 ({len(pending_requests)}건)**")
             for idx, req in pending_requests.iterrows():
                 req_user = users_df[users_df["user_id"] == req["follower_id"]]
                 req_nick = req_user.iloc[0]["nickname"] if not req_user.empty else req["follower_id"]
                 
                 col_req1, col_req2, col_req3 = st.columns([3, 1, 1])
                 with col_req1:
-                    st.write(f"• **{req_nick}** (`{req['follower_id']}`) 님이 팔로우를 요청했습니다.")
+                    st.write(f"• **{req_nick}** 님의 요청")
                 with col_req2:
                     if st.button("수락", key=f"acc_{idx}"):
                         follows_df.loc[idx, "status"] = "accepted"
                         save_data(follows_df, FOLLOWS_FILE)
-                        st.success(f"{req_nick}님의 요청을 수락했습니다.")
+                        st.success("수락 완료")
                         st.rerun()
                 with col_req3:
                     if st.button("거절", key=f"rej_{idx}"):
                         follows_df = follows_df.drop(idx)
                         save_data(follows_df, FOLLOWS_FILE)
-                        st.info("요청을 거절했습니다.")
+                        st.info("거절 완료")
                         st.rerun()
             st.divider()
 
-        # 2. 친구 닉네임 검색 및 팔로우 요청 보내기
-        st.write("### 🔍 친구 검색 및 팔로우")
-        search_nick = st.text_input("닉네임 검색", placeholder="친구 닉네임").strip()
+        st.markdown("### 🔍 친구 검색")
+        search_nick = st.text_input("닉네임 검색", placeholder="친구 닉네임 입력").strip()
         if search_nick:
             target_user = users_df[users_df["nickname"] == search_nick]
             if not target_user.empty:
@@ -720,11 +734,10 @@ else:
                 t_bio = target_user.iloc[0]["bio"]
                 
                 if t_id == st.session_state.user_id:
-                    st.warning("자기 자신은 팔로우할 수 없습니다.")
+                    st.warning("본인 계정입니다.")
                 else:
                     st.write(f"**{t_nick}** ({t_bio if pd.notna(t_bio) else '소개 없음'})")
                     
-                    # 현재 팔로우 상태 체크
                     f_match = follows_df[
                         (follows_df["follower_id"] == st.session_state.user_id) & 
                         (follows_df["following_id"] == t_id)
@@ -733,8 +746,8 @@ else:
                     if not f_match.empty:
                         curr_status = f_match.iloc[0]["status"]
                         if curr_status == "pending":
-                            st.info("⏳ 수락 대기 중인 상태입니다.")
-                            if st.button("팔로우 요청 취소"):
+                            st.info("⏳ 수락 대기 중입니다.")
+                            if st.button("요청 취소"):
                                 follows_df = follows_df[~(
                                     (follows_df["follower_id"] == st.session_state.user_id) & 
                                     (follows_df["following_id"] == t_id)
@@ -748,10 +761,10 @@ else:
                                     (follows_df["following_id"] == t_id)
                                 )]
                                 save_data(follows_df, FOLLOWS_FILE)
-                                st.success(f"{t_nick}님을 언팔로우했습니다.")
+                                st.success("언팔로우 완료")
                                 st.rerun()
                     else:
-                        if st.button("팔로우 요청하기"):
+                        if st.button("팔로우 요청"):
                             new_follow = pd.DataFrame([{
                                 "follower_id": st.session_state.user_id, 
                                 "following_id": t_id,
@@ -759,13 +772,13 @@ else:
                             }])
                             follows_df = pd.concat([follows_df, new_follow], ignore_index=True)
                             save_data(follows_df, FOLLOWS_FILE)
-                            st.success(f"{t_nick}님에게 팔로우 요청을 보냈습니다!")
+                            st.success("팔로우 요청을 보냈습니다!")
                             st.rerun()
             else:
                 st.error("유저를 찾을 수 없습니다.")
 
         st.divider()
-        st.write("### 내 팔로잉 목록 (승인 완료)")
+        st.markdown("### 내 팔로잉 (승인됨)")
         my_follows = follows_df[
             (follows_df["follower_id"] == st.session_state.user_id) & 
             (follows_df["status"] == "accepted")
@@ -779,7 +792,7 @@ else:
 
     # TAB 6: 프로필 관리 & 리포트
     with tab_profile:
-        st.subheader("⚙️ 프로필 관리 & 리포트")
+        st.markdown("### ⚙️ 프로필 수정")
         users_df = load_users()
         user_idx = users_df[users_df["user_id"] == st.session_state.user_id].index
         
@@ -787,8 +800,6 @@ else:
             curr_row = users_df.loc[user_idx[0]]
             
             with st.form("edit_profile_form"):
-                st.write("### 프로필 정보 수정")
-                
                 mod_nick = st.text_input("닉네임 변경", value=curr_row["nickname"]).strip()
                 mod_bio = st.text_input("한 줄 소개 변경", value=curr_row.get("bio", "")).strip()
                 new_pic = st.file_uploader("프로필 사진 변경 (앨범)", type=["jpg", "jpeg", "png"])
@@ -817,7 +828,7 @@ else:
                         st.rerun()
 
         st.divider()
-        st.subheader("📊 내 성장 리포트 & 기록 관리")
+        st.markdown("### 📊 내 성장 리포트")
         my_df = workouts_df[workouts_df["user_id"] == st.session_state.user_id]
         if not my_df.empty:
             my_df["volume"] = my_df["weight"] * my_df["reps"]
@@ -827,7 +838,7 @@ else:
             vol_by_date = my_df.groupby("date")["volume"].sum().reset_index()
             st.line_chart(vol_by_date.set_index("date"))
             
-            st.write("### 내 상세 운동 기록 및 삭제")
+            st.markdown("### 상세 운동 기록 및 삭제")
             my_grouped = my_df.groupby("date")
             for d, d_group in sorted(my_grouped, key=lambda x: x[0], reverse=True):
                 with st.expander(f"📅 {d} 기록 상세 보기"):
@@ -839,7 +850,7 @@ else:
                             if st.button("삭제", key=f"del_single_{idx}"):
                                 workouts_df = workouts_df.drop(idx)
                                 save_data(workouts_df, WORKOUT_FILE)
-                                st.success("선택한 세트 기록 삭제 완료")
+                                st.success("삭제 완료")
                                 st.rerun()
         else:
             st.info("등록된 기록이 없습니다.")
