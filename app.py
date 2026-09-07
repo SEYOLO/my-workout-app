@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 import time
+import random
 from datetime import datetime
 
 # 1. 페이지 기본 설정
@@ -11,119 +12,41 @@ USERS_FILE = "users.csv"
 FOLLOWS_FILE = "follows.csv"
 WORKOUT_FILE = "workout_data.csv"
 
-# 고급 모바일 어플리케이션 커스텀 CSS (Ultra Dark UI & Custom Components)
+# 커스텀 모던 다크 UI CSS
 st.markdown("""
 <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-    
-    * {
-        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-    }
-
-    /* 전체 앱 배경 */
-    .stApp {
-        background: #090A0F;
-        color: #F1F5F9;
-    }
-
-    /* 상단 앱 타이틀 디자인 */
+    * { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }
+    .stApp { background: #090A0F; color: #F1F5F9; }
     .main-title {
-        font-size: 2.4rem;
-        font-weight: 900;
-        letter-spacing: -0.05em;
+        font-size: 2.2rem; font-weight: 900; letter-spacing: -0.05em;
         background: linear-gradient(135deg, #38BDF8 0%, #818CF8 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-align: center;
-        margin-top: 0.5rem;
-        margin-bottom: 0.2rem;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        text-align: center; margin-top: 0.5rem; margin-bottom: 0.2rem;
     }
-    .sub-title {
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: #64748B;
-        text-align: center;
-        margin-bottom: 1.8rem;
-    }
-
-    /* 지난 기록 팁 전용 카드 디자인 */
+    .sub-title { font-size: 0.88rem; color: #64748B; text-align: center; margin-bottom: 1.5rem; }
     .prev-record-card {
-        background: rgba(56, 189, 248, 0.08);
-        border: 1px solid rgba(56, 189, 248, 0.25);
-        border-radius: 12px;
-        padding: 12px 16px;
-        margin-bottom: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+        background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25);
+        border-radius: 12px; padding: 12px 16px; margin-bottom: 14px;
+        display: flex; align-items: center; justify-content: space-between;
     }
-    .prev-record-title {
-        font-size: 0.85rem;
-        color: #38BDF8;
-        font-weight: 700;
-    }
-    .prev-record-value {
-        font-size: 0.95rem;
-        color: #F8FAFC;
-        font-weight: 800;
-    }
-
-    /* 고급 카드 컨테이너 */
+    .prev-record-title { font-size: 0.85rem; color: #38BDF8; font-weight: 700; }
+    .prev-record-value { font-size: 0.95rem; color: #F8FAFC; font-weight: 800; }
     div[data-testid="stForm"], div.stExpander {
-        background: #11131F !important;
-        border: 1px solid #1E293B !important;
-        border-radius: 16px !important;
-        padding: 20px !important;
+        background: #11131F !important; border: 1px solid #1E293B !important;
+        border-radius: 16px !important; padding: 18px !important;
         box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5) !important;
     }
-
-    /* 모바일 어플리케이션 느낌의 터치 버튼 */
     .stButton > button, div[data-testid="stForm"] button {
-        width: 100% !important;
-        background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
-        color: #FFFFFF !important;
-        border: none !important;
-        border-radius: 10px !important;
-        padding: 14px 20px !important;
-        font-weight: 700 !important;
-        font-size: 1.05rem !important;
-        letter-spacing: -0.02em !important;
-        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
-        transition: all 0.2s ease !important;
+        width: 100% !important; background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+        color: #FFFFFF !important; border: none !important; border-radius: 10px !important;
+        padding: 12px 20px !important; font-weight: 700 !important; font-size: 1rem !important;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important; transition: all 0.2s ease !important;
     }
-    .stButton > button:active {
-        transform: scale(0.98);
-    }
-
-    /* 휴식 타이머 전용 버튼 스타일링 */
-    div.timer-btn > button {
-        background: #1E293B !important;
-        color: #38BDF8 !important;
-        border: 1px solid #334155 !important;
-        box-shadow: none !important;
-        padding: 8px 12px !important;
-        font-size: 0.9rem !important;
-    }
-
-    /* 탭 헤더 디자인 */
-    button[data-baseweb="tab"] {
-        font-size: 0.95rem !important;
-        font-weight: 700 !important;
-        color: #64748B !important;
-        padding: 10px 16px !important;
-    }
-    button[aria-selected="true"] {
-        color: #38BDF8 !important;
-        border-bottom: 2.5px solid #38BDF8 !important;
-    }
-
-    /* 모바일 반응형 패딩 최적화 */
+    button[data-baseweb="tab"] { font-size: 0.9rem !important; font-weight: 700 !important; color: #64748B !important; }
+    button[aria-selected="true"] { color: #38BDF8 !important; border-bottom: 2.5px solid #38BDF8 !important; }
     @media (max-width: 640px) {
-        .block-container {
-            padding-left: 0.8rem !important;
-            padding-right: 0.8rem !important;
-            padding-top: 1.5rem !important;
-        }
+        .block-container { padding-left: 0.8rem !important; padding-right: 0.8rem !important; padding-top: 1.2rem !important; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -151,32 +74,55 @@ def load_workouts():
 
 def save_data(df, filename): df.to_csv(filename, index=False)
 
-# 3. 운동 DB 및 프리셋
-EXERCISE_DB = {
-    "가슴": ["벤치프레스", "인클라인 벤치프레스", "덤벨 벤치프레스", "인클라인 덤벨 벤치프레스", "덤벨 플라이", "체스트 프레스 머신", "펙덱 플라이 머신", "케이블 크로스오버", "딥스", "푸쉬업"],
-    "등": ["데드리프트", "바벨로우", "렛풀다운", "시티드 케이블 로우", "원암 덤벨로우", "풀업", "어시스트 풀업 머신", "티바로우", "암 풀다운"],
-    "하체": ["스쿼트", "레그프레스", "레그 익스텐션", "레그 컬", "런지", "이너사이 머신", "아웃사이 머신", "스티프 레그 데드리프트", "카프 레이즈"],
-    "어깨": ["오버헤드 프레스", "덤벨 숄더프레스", "사이드 레터럴 레이즈", "벤트오버 레터럴 레이즈", "페이스풀", "아놀드 프레스", "숄더프레스 머신"],
-    "팔": ["바벨 컬", "덤벨 컬", "해머 컬", "프리처 컬", "트라이셉스 케이블 푸쉬다운", "라잉 트라이셉스 익스텐션", "딥스(삼두)"],
-    "복근/유산소": ["크런치", "레그 레이즈", "플랭크", "아브슬라이드", "천국의 계단(스텝밀)", "런닝머신", "사이클", "인클라인 런닝머신"]
-}
-ALL_EXERCISES = list(set(sum(EXERCISE_DB.values(), [])))
-
-ROUTINE_PRESETS = {
-    "가슴/삼두 DAY": ["벤치프레스", "인클라인 덤벨 벤치프레스", "체스트 프레스 머신", "펙덱 플라이 머신", "트라이셉스 케이블 푸쉬다운"],
-    "등/이두 DAY": ["렛풀다운", "바벨로우", "시티드 케이블 로우", "암 풀다운", "바벨 컬", "해머 컬"],
-    "하체/복근 DAY": ["스쿼트", "레그프레스", "레그 익스텐션", "레그 컬", "크런치", "플랭크"],
-    "어깨/유산소 DAY": ["오버헤드 프레스", "덤벨 숄더프레스", "사이드 레터럴 레이즈", "페이스풀", "천국의 계단(스텝밀)"]
+# 3. 부위별 세부 카테고리 DB (동적 추천 조합용)
+EXERCISE_POOL = {
+    "가슴_메인": ["벤치프레스", "인클라인 벤치프레스", "덤벨 벤치프레스", "인클라인 덤벨 벤치프레스"],
+    "가슴_서브": ["체스트 프레스 머신", "펙덱 플라이 머신", "케이블 크로스오버", "딥스", "덤벨 플라이"],
+    "등_메인": ["데드리프트", "바벨로우", "풀업", "티바로우"],
+    "등_서브": ["렛풀다운", "시티드 케이블 로우", "원암 덤벨로우", "어시스트 풀업 머신", "암 풀다운"],
+    "하체_메인": ["스쿼트", "레그프레스", "스티프 레그 데드리프트"],
+    "하체_서브": ["레그 익스텐션", "레그 컬", "런지", "이너사이 머신", "아웃사이 머신", "카프 레이즈"],
+    "어깨_메인": ["오버헤드 프레스", "덤벨 숄더프레스", "숄더프레스 머신"],
+    "어깨_서브": ["사이드 레터럴 레이즈", "벤트오버 레터럴 레이즈", "페이스풀", "아놀드 프레스"],
+    "삼두": ["트라이셉스 케이블 푸쉬다운", "라잉 트라이셉스 익스텐션", "딥스(삼두)"],
+    "이두": ["바벨 컬", "덤벨 컬", "해머 컬", "프리처 컬"],
+    "복근/유산소": ["크런치", "레그 레이즈", "플랭크", "천국의 계단(스텝밀)", "런닝머신", "사이클"]
 }
 
-# 세션 관리
+ALL_EXERCISES = list(set(sum(EXERCISE_POOL.values(), [])))
+
+# 동적 추천 함수 (매번 무작위 조합 생성)
+def generate_dynamic_routine(routine_type):
+    random.seed(time.time()) # 랜덤 시드 초기화
+    if routine_type == "가슴/삼두 DAY":
+        main = random.sample(EXERCISE_POOL["가슴_메인"], 2)
+        sub = random.sample(EXERCISE_POOL["가슴_서브"], 2)
+        arm = random.sample(EXERCISE_POOL["삼두"], 1)
+        return main + sub + arm
+    elif routine_type == "등/이두 DAY":
+        main = random.sample(EXERCISE_POOL["등_메인"], 2)
+        sub = random.sample(EXERCISE_POOL["등_서브"], 2)
+        arm = random.sample(EXERCISE_POOL["이두"], 1)
+        return main + sub + arm
+    elif routine_type == "하체/복근 DAY":
+        main = random.sample(EXERCISE_POOL["하체_메인"], 2)
+        sub = random.sample(EXERCISE_POOL["하체_서브"], 2)
+        abs_ex = random.sample(EXERCISE_POOL["복근/유산소"], 1)
+        return main + sub + abs_ex
+    elif routine_type == "어깨/유산소 DAY":
+        main = random.sample(EXERCISE_POOL["어깨_메인"], 2)
+        sub = random.sample(EXERCISE_POOL["어깨_서브"], 2)
+        cardio = random.sample([x for x in EXERCISE_POOL["복근/유산소"] if "런닝" in x or "계단" in x or "사이클" in x], 1)
+        return main + sub + cardio
+    return []
+
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "nickname" not in st.session_state: st.session_state.nickname = None
 
 # --- 로그인 / 회원가입 화면 ---
 if st.session_state.user_id is None:
     st.markdown("<div class='main-title'>⚡ 운동일지</div>", unsafe_allow_html=True)
-    st.markdown("<div class='sub-title'>스마트한 세트 기록과 소셜 피드</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sub-title'>스마트 세트 일지 & 소셜 피드</div>", unsafe_allow_html=True)
     
     auth_tab1, auth_tab2 = st.tabs(["🔑 로그인", "📝 회원가입"])
     users_df = load_users()
@@ -231,8 +177,8 @@ else:
         
     st.markdown("<div class='main-title'>⚡ 운동일지</div>", unsafe_allow_html=True)
     
-    tab_workout, tab_timer, tab_feed, tab_friends, tab_history = st.tabs([
-        "🔥 운동 기록", "⏱️ 휴식 타이머", "📱 피드", "👥 팔로우", "📅 내 일지"
+    tab_workout, tab_timer, tab_feed, tab_calendar, tab_friends, tab_history = st.tabs([
+        "🔥 운동 기록", "⏱️ 타이머", "📱 피드", "📅 소셜 달력", "👥 팔로우", "📊 내 리포트"
     ])
     
     workouts_df = load_workouts()
@@ -241,12 +187,27 @@ else:
     with tab_workout:
         st.subheader("오늘의 운동")
         today_date = st.date_input("운동 날짜", datetime.now())
-        routine_type = st.selectbox("추천 DAY 선택 또는 자율 구성", ["선택 안함"] + list(ROUTINE_PRESETS.keys()) + ["자율 운동"])
+        
+        routine_options = ["선택 안함", "가슴/삼두 DAY", "등/이두 DAY", "하체/복근 DAY", "어깨/유산소 DAY", "자율 운동"]
+        routine_type = st.selectbox("추천 DAY 선택 또는 자율 구성", routine_options)
         
         selected_exercises = []
-        if routine_type in ROUTINE_PRESETS:
-            default_exercises = [ex for ex in ROUTINE_PRESETS[routine_type] if ex in ALL_EXERCISES]
-            selected_exercises = st.multiselect("종목 확인 및 변경", options=ALL_EXERCISES, default=default_exercises)
+        if routine_type in ["가슴/삼두 DAY", "등/이두 DAY", "하체/복근 DAY", "어깨/유산소 DAY"]:
+            # 추천 버튼 눌렀을 때 또는 세션 초기화 시 다른 조합 추천
+            if "random_routine" not in st.session_state or st.session_state.get("current_routine_type") != routine_type:
+                st.session_state.random_routine = generate_dynamic_routine(routine_type)
+                st.session_state.current_routine_type = routine_type
+                
+            col_rec1, col_rec2 = st.columns([3, 1])
+            with col_rec1:
+                st.info(f"💡 **[{routine_type}]** 오늘의 추천 무작위 조합입니다.")
+            with col_rec2:
+                if st.button("🎲 다시 추천"):
+                    st.session_state.random_routine = generate_dynamic_routine(routine_type)
+                    st.rerun()
+                    
+            selected_exercises = st.multiselect("수행할 종목 수정 및 추가", options=ALL_EXERCISES, default=st.session_state.random_routine)
+            
         elif routine_type == "자율 운동":
             selected_exercises = st.multiselect("수행할 종목을 고르세요", options=ALL_EXERCISES)
             
@@ -256,16 +217,12 @@ else:
             
         if selected_exercises:
             st.divider()
-            
-            # 지난 기록 가이드 자동 조회 함수
             my_past_workouts = workouts_df[workouts_df["user_id"] == st.session_state.user_id]
             
             with st.form("workout_input_form"):
                 workout_entries = []
                 for ex in selected_exercises:
                     st.write(f"🏋️ **{ex}**")
-                    
-                    # 지난 회차 수행 기록 자동 안내 (점진적 과부하 가이드)
                     ex_past = my_past_workouts[my_past_workouts["exercise"] == ex]
                     if not ex_past.empty:
                         max_w = ex_past["weight"].max()
@@ -278,7 +235,7 @@ else:
                         </div>
                         """, unsafe_allow_html=True)
                     else:
-                        st.caption("💡 첫 수행 종목입니다. 자신에게 맞는 첫 무게를 설정하세요.")
+                        st.caption("💡 첫 수행 종목입니다.")
                     
                     c1, c2, c3 = st.columns(3)
                     with c1: num_sets = st.number_input(f"세트 ({ex})", 1, 10, 3, key=f"s_{ex}")
@@ -309,14 +266,11 @@ else:
                     new_df = pd.DataFrame(workout_entries)
                     workouts_df = pd.concat([workouts_df, new_df], ignore_index=True)
                     save_data(workouts_df, WORKOUT_FILE)
-                    st.balloons()
                     st.success("운동 기록이 성공적으로 저장되었습니다!")
 
     # TAB 2: 세트 간 휴식 타이머
     with tab_timer:
         st.subheader("⏱️ 세트 간 휴식 카운트다운")
-        st.caption("원하는 휴식 시간을 누르면 자동으로 카운트다운이 시작됩니다.")
-        
         tc1, tc2, tc3, tc4 = st.columns(4)
         set_seconds = 0
         with tc1:
@@ -329,27 +283,22 @@ else:
             if st.button("180초"): set_seconds = 180
             
         custom_sec = st.number_input("직접 초 입력", min_value=0, step=10, value=0)
-        if custom_sec > 0 and st.button("타이머 시작"):
-            set_seconds = custom_sec
+        if custom_sec > 0 and st.button("타이머 시작"): set_seconds = custom_sec
             
         if set_seconds > 0:
             timer_placeholder = st.empty()
             progress_bar = st.progress(1.0)
-            
             for remaining in range(set_seconds, -1, -1):
                 mins, secs = divmod(remaining, 60)
                 timer_placeholder.markdown(f"<h1 style='text-align: center; color: #38BDF8; font-size: 4rem; font-weight: 900;'>{mins:02d}:{secs:02d}</h1>", unsafe_allow_html=True)
                 progress_bar.progress(remaining / set_seconds)
                 time.sleep(1)
-            
-            timer_placeholder.markdown("<h1 style='text-align: center; color: #4ADE80; font-size: 3rem;'>🔥 휴식 끝! 다음 세트 시작!</h1>", unsafe_allow_html=True)
-            st.balloons()
+            timer_placeholder.markdown("<h1 style='text-align: center; color: #4ADE80; font-size: 2rem; font-weight: 800;'>🔥 휴식 끝! 다음 세트 시작!</h1>", unsafe_allow_html=True)
 
-    # TAB 3: 팔로우 소셜 피드
+    # TAB 3: 팔로우 피드
     with tab_feed:
         st.subheader("📱 팔로워 오운완 피드")
         follows_df = load_follows()
-        
         my_followings = follows_df[follows_df["follower_id"] == st.session_state.user_id]["following_id"].tolist()
         feed_users = set(my_followings + [st.session_state.user_id])
         
@@ -363,22 +312,49 @@ else:
             for (date, nick, routine, uid), group in sorted(grouped, key=lambda x: x[0][0], reverse=True):
                 is_me = (uid == st.session_state.user_id)
                 card_title = f"💪 {nick}님의 오운완 ({date})" if not is_me else f"💪 나의 운동 ({date})"
-                
                 with st.expander(f"{card_title} - [{routine}]", expanded=True):
                     total_vol = (group["weight"] * group["reps"] * group["set_num"]).sum()
                     st.write(f"**총 누적 볼륨:** `{total_vol:,.0f} kg`")
-                    
                     ex_summary = group.groupby("exercise").agg({"set_num": "max", "weight": "max"}).reset_index()
                     for _, row in ex_summary.iterrows():
                         st.write(f"• **{row['exercise']}**: 최고 {row['weight']}kg ({row['set_num']} 세트)")
-                    
                     memo_val = group["memo"].iloc[0]
                     if pd.notna(memo_val) and str(memo_val).strip():
                         st.caption(f"💬 메모: {memo_val}")
         else:
-            st.info("팔로워들의 운동 기록이 없습니다. 친구를 팔로우하거나 오늘 첫 기록을 작성해 보세요!")
+            st.info("팔로워들의 운동 기록이 아직 없습니다.")
 
-    # TAB 4: 친구 찾기 & 팔로우 관리
+    # TAB 4: 팔로워 통합 출석 달력
+    with tab_calendar:
+        st.subheader("📅 팔로워 출석 현황 달력")
+        follows_df = load_follows()
+        my_followings = follows_df[follows_df["follower_id"] == st.session_state.user_id]["following_id"].tolist()
+        feed_users = set(my_followings + [st.session_state.user_id])
+        
+        now = datetime.now()
+        year = st.number_input("연도", value=now.year, min_value=2024, max_value=2030)
+        month = st.slider("월 선택", 1, 12, now.month)
+        
+        cal_df = workouts_df[
+            (workouts_df["user_id"].isin(feed_users)) & 
+            ((workouts_df["is_private"] == "False") | (workouts_df["user_id"] == st.session_state.user_id))
+        ]
+        
+        if not cal_df.empty:
+            cal_df["month"] = pd.to_datetime(cal_df["date"]).dt.month
+            cal_df["year"] = pd.to_datetime(cal_df["date"]).dt.year
+            month_df = cal_df[(cal_df["year"] == year) & (cal_df["month"] == month)]
+            
+            if not month_df.empty:
+                st.write(f"### 🗓️ {year}년 {month}월 출석 현황")
+                attendance = month_df.groupby(["date", "nickname"])["routine"].first().unstack(fill_value=None)
+                st.dataframe(attendance.sort_index(ascending=False), use_container_width=True)
+            else:
+                st.info(f"{year}년 {month}월에 등록된 운동 출석 기록이 없습니다.")
+        else:
+            st.info("출석 데이터를 표출할 기록이 없습니다.")
+
+    # TAB 5: 친구 찾기 & 팔로우
     with tab_friends:
         st.subheader("👥 친구 찾기 및 팔로우")
         users_df = load_users()
@@ -430,12 +406,21 @@ else:
         else:
             st.caption("아직 팔로우한 친구가 없습니다.")
 
-    # TAB 5: 내 일지 전용 조회
+    # TAB 6: 내 리포트 및 성장 분석
     with tab_history:
-        st.subheader("📅 내 개인 운동 기록")
+        st.subheader("📊 내 개인 운동 리포트")
         my_df = workouts_df[workouts_df["user_id"] == st.session_state.user_id]
         
         if not my_df.empty:
+            my_df["volume"] = my_df["weight"] * my_df["reps"] * my_df["set_num"]
+            total_vol = my_df["volume"].sum()
+            st.metric("총 누적 운동 볼륨", f"{total_vol:,.0f} kg")
+            
+            vol_by_date = my_df.groupby("date")["volume"].sum().reset_index()
+            st.line_chart(vol_by_date.set_index("date"))
+            
+            st.divider()
+            st.write("### 전체 세부 기록 데이터")
             st.dataframe(my_df.sort_values(by="date", ascending=False), use_container_width=True)
         else:
             st.info("아직 등록된 운동 기록이 없습니다.")
