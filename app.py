@@ -8,9 +8,9 @@ st.set_page_config(page_title="루틴 추천 & 운동 일지", page_icon="🏋�
 
 DATA_FILE = "workout_data.csv"
 
-# 2. 운동 기구 및 종목 데이터베이스 (50여 개)
+# 2. 운동 기구 및 종목 데이터베이스 (이름 통일)
 EXERCISE_DB = {
-    "가슴": ["벤치프레스", "인클라인 벤치프레스", "덤벨 벤치프레스", "덤벨 플라이", "체스트 프레스 머신", "펙덱 플라이 머신", "케이블 크로스오버", "딥스", "푸쉬업"],
+    "가슴": ["벤치프레스", "인클라인 벤치프레스", "덤벨 벤치프레스", "인클라인 덤벨 벤치프레스", "덤벨 플라이", "체스트 프레스 머신", "펙덱 플라이 머신", "케이블 크로스오버", "딥스", "푸쉬업"],
     "등": ["데드리프트", "바벨로우", "렛풀다운", "시티드 케이블 로우", "원암 덤벨로우", "풀업", "어시스트 풀업 머신", "티바로우", "암 풀다운"],
     "하체": ["스쿼트", "레그프레스", "레그 익스텐션", "레그 컬", "런지", "이너사이 머신", "아웃사이 머신", "스티프 레그 데드리프트", "카프 레이즈"],
     "어깨": ["오버헤드 프레스", "덤벨 숄더프레스", "사이드 레터럴 레이즈", "벤트오버 레터럴 레이즈", "페이스풀", "아놀드 프레스", "숄더프레스 머신"],
@@ -18,9 +18,12 @@ EXERCISE_DB = {
     "복근/유산소": ["크런치", "레그 레이즈", "플랭크", "아브슬라이드", "천국의 계단(스텝밀)", "런닝머신", "사이클", "인클라인 런닝머신"]
 }
 
-# 3. DAY별 추천 루틴 프리셋
+# 모든 종목 리스트 1차원 배열로 병합
+ALL_EXERCISES = list(set(sum(EXERCISE_DB.values(), [])))
+
+# 3. DAY별 추천 루틴 프리셋 (ALL_EXERCISES 내 이름과 정확히 매칭)
 ROUTINE_PRESETS = {
-    "가슴/삼두 DAY": ["벤치프레스", "인클라인 덤벨 프레스", "체스트 프레스 머신", "펙덱 플라이 머신", "트라이셉스 케이블 푸쉬다운"],
+    "가슴/삼두 DAY": ["벤치프레스", "인클라인 덤벨 벤치프레스", "체스트 프레스 머신", "펙덱 플라이 머신", "트라이셉스 케이블 푸쉬다운"],
     "등/이두 DAY": ["렛풀다운", "바벨로우", "시티드 케이블 로우", "암 풀다운", "바벨 컬", "해머 컬"],
     "하체/복근 DAY": ["스쿼트", "레그프레스", "레그 익스텐션", "레그 컬", "크런치", "플랭크"],
     "어깨/유산소 DAY": ["오버헤드 프레스", "덤벨 숄더프레스", "사이드 레터럴 레이즈", "페이스풀", "천국의 계단(스텝밀)"]
@@ -40,7 +43,7 @@ df = load_data()
 
 st.title("🏋️‍♂️ 운동 루틴 추천 & 세트 일지")
 
-# 상단 로그인/사용자 선택
+# 상단 사용자 설정
 col_u1, col_u2 = st.columns([2, 2])
 with col_u1:
     user_name = st.text_input("사용자 이름 (로그인)", value="세열")
@@ -61,10 +64,11 @@ with tab1:
     
     if routine_type in ROUTINE_PRESETS:
         st.info(f"💡 **[{routine_type}]** 추천 운동 목록입니다. 헬스장 환경에 맞게 종목을 변경/추가할 수 있습니다.")
-        default_exercises = ROUTINE_PRESETS[routine_type]
-        selected_exercises = st.multiselect("수행할 종목 확인 및 수정", options=sum(EXERCISE_DB.values(), []), default=default_exercises)
+        # DB에 존재하는 종목만 디폴트로 설정하여 오류 방지
+        default_exercises = [ex for ex in ROUTINE_PRESETS[routine_type] if ex in ALL_EXERCISES]
+        selected_exercises = st.multiselect("수행할 종목 확인 및 수정", options=ALL_EXERCISES, default=default_exercises)
     elif routine_type == "자율 운동":
-        selected_exercises = st.multiselect("오늘 수행할 종목을 고르세요", options=sum(EXERCISE_DB.values(), []))
+        selected_exercises = st.multiselect("오늘 수행할 종목을 고르세요", options=ALL_EXERCISES)
     
     # 직접 입력 종목 추가
     custom_ex = st.text_input("목록에 없는 운동이 있다면 직접 입력하세요 (쉼표로 구분)", placeholder="예: 케이블 언더그립 로우, 폼롤러 스트레칭")
