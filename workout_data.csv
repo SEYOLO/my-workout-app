@@ -1,1 +1,1 @@
-date,user,routine,exercise,set_num,weight,reps,memo
+date,user_id,nickname,routine,exercise,set_num,weight,reps,memo,is_private
