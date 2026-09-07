@@ -1,90 +1,134 @@
 import streamlit as st
 import pandas as pd
 import os
+import time
 from datetime import datetime
 
-# 1. 페이지 설정 및 다크 테마 레이아웃
+# 1. 페이지 기본 설정
 st.set_page_config(page_title="운동일지", page_icon="⚡", layout="centered", initial_sidebar_state="collapsed")
 
 USERS_FILE = "users.csv"
 FOLLOWS_FILE = "follows.csv"
 WORKOUT_FILE = "workout_data.csv"
 
-# 모바일 반응형 및 고급 모던 다크 커스텀 CSS
+# 고급 모바일 어플리케이션 커스텀 CSS (Ultra Dark UI & Custom Components)
 st.markdown("""
 <style>
-    /* 전체 배경 및 폰트 설정 */
-    .stApp {
-        background-color: #0E1117;
-        color: #E0E0E0;
-    }
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     
-    /* 헤더 타이틀 스타일링 */
+    * {
+        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    }
+
+    /* 전체 앱 배경 */
+    .stApp {
+        background: #090A0F;
+        color: #F1F5F9;
+    }
+
+    /* 상단 앱 타이틀 디자인 */
     .main-title {
-        font-size: 2.2rem;
-        font-weight: 800;
-        background: linear-gradient(45deg, #00F2FE, #4FACFE);
+        font-size: 2.4rem;
+        font-weight: 900;
+        letter-spacing: -0.05em;
+        background: linear-gradient(135deg, #38BDF8 0%, #818CF8 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         text-align: center;
-        margin-bottom: 0.5rem;
+        margin-top: 0.5rem;
+        margin-bottom: 0.2rem;
     }
     .sub-title {
-        font-size: 0.95rem;
-        color: #8A99AD;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #64748B;
         text-align: center;
-        margin-bottom: 2rem;
+        margin-bottom: 1.8rem;
     }
 
-    /* 카드형 컨테이너 스타일링 (글래스모피즘) */
-    div[data-testid="stForm"], div.css-1r6sl80, div.stExpander {
-        background: #161B22 !important;
-        border: 1px solid #30363D !important;
-        border-radius: 12px !important;
-        padding: 18px !important;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+    /* 지난 기록 팁 전용 카드 디자인 */
+    .prev-record-card {
+        background: rgba(56, 189, 248, 0.08);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .prev-record-title {
+        font-size: 0.85rem;
+        color: #38BDF8;
+        font-weight: 700;
+    }
+    .prev-record-value {
+        font-size: 0.95rem;
+        color: #F8FAFC;
+        font-weight: 800;
     }
 
-    /* 모바일 버튼 터치 영역 최적화 및 스타일 */
+    /* 고급 카드 컨테이너 */
+    div[data-testid="stForm"], div.stExpander {
+        background: #11131F !important;
+        border: 1px solid #1E293B !important;
+        border-radius: 16px !important;
+        padding: 20px !important;
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    /* 모바일 어플리케이션 느낌의 터치 버튼 */
     .stButton > button, div[data-testid="stForm"] button {
         width: 100% !important;
-        background: linear-gradient(90deg, #2563EB, #1D4ED8) !important;
+        background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
         color: #FFFFFF !important;
         border: none !important;
-        border-radius: 8px !important;
-        padding: 12px 20px !important;
+        border-radius: 10px !important;
+        padding: 14px 20px !important;
         font-weight: 700 !important;
-        font-size: 1rem !important;
-        transition: all 0.2s ease-in-out !important;
+        font-size: 1.05rem !important;
+        letter-spacing: -0.02em !important;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+        transition: all 0.2s ease !important;
     }
-    .stButton > button:hover {
-        background: linear-gradient(90deg, #1D4ED8, #1E40AF) !important;
-        transform: translateY(-1px);
+    .stButton > button:active {
+        transform: scale(0.98);
     }
 
-    /* 탭 스타일 조정 */
+    /* 휴식 타이머 전용 버튼 스타일링 */
+    div.timer-btn > button {
+        background: #1E293B !important;
+        color: #38BDF8 !important;
+        border: 1px solid #334155 !important;
+        box-shadow: none !important;
+        padding: 8px 12px !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* 탭 헤더 디자인 */
     button[data-baseweb="tab"] {
-        font-size: 1rem !important;
-        font-weight: 600 !important;
-        color: #8A99AD !important;
+        font-size: 0.95rem !important;
+        font-weight: 700 !important;
+        color: #64748B !important;
+        padding: 10px 16px !important;
     }
     button[aria-selected="true"] {
         color: #38BDF8 !important;
-        border-bottom-color: #38BDF8 !important;
+        border-bottom: 2.5px solid #38BDF8 !important;
     }
 
-    /* 모바일 가로 여백 줄이기 */
+    /* 모바일 반응형 패딩 최적화 */
     @media (max-width: 640px) {
         .block-container {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            padding-top: 2rem !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+            padding-top: 1.5rem !important;
         }
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 2. 데이터베이스 초기화 함수
+# 2. DB 초기화 함수
 def init_db():
     if not os.path.exists(USERS_FILE):
         pd.DataFrame(columns=["user_id", "password", "nickname", "bio"]).to_csv(USERS_FILE, index=False)
@@ -107,7 +151,7 @@ def load_workouts():
 
 def save_data(df, filename): df.to_csv(filename, index=False)
 
-# 3. 운동 DB 및 루틴
+# 3. 운동 DB 및 프리셋
 EXERCISE_DB = {
     "가슴": ["벤치프레스", "인클라인 벤치프레스", "덤벨 벤치프레스", "인클라인 덤벨 벤치프레스", "덤벨 플라이", "체스트 프레스 머신", "펙덱 플라이 머신", "케이블 크로스오버", "딥스", "푸쉬업"],
     "등": ["데드리프트", "바벨로우", "렛풀다운", "시티드 케이블 로우", "원암 덤벨로우", "풀업", "어시스트 풀업 머신", "티바로우", "암 풀다운"],
@@ -125,22 +169,19 @@ ROUTINE_PRESETS = {
     "어깨/유산소 DAY": ["오버헤드 프레스", "덤벨 숄더프레스", "사이드 레터럴 레이즈", "페이스풀", "천국의 계단(스텝밀)"]
 }
 
-# 4. 세션 관리
-if "user_id" not in st.session_state:
-    st.session_state.user_id = None
-if "nickname" not in st.session_state:
-    st.session_state.nickname = None
+# 세션 관리
+if "user_id" not in st.session_state: st.session_state.user_id = None
+if "nickname" not in st.session_state: st.session_state.nickname = None
 
 # --- 로그인 / 회원가입 화면 ---
 if st.session_state.user_id is None:
     st.markdown("<div class='main-title'>⚡ 운동일지</div>", unsafe_allow_html=True)
-    st.markdown("<div class='sub-title'>스마트한 루틴 추천과 소셜 세트 일지</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sub-title'>스마트한 세트 기록과 소셜 피드</div>", unsafe_allow_html=True)
     
     auth_tab1, auth_tab2 = st.tabs(["🔑 로그인", "📝 회원가입"])
     users_df = load_users()
     
     with auth_tab1:
-        # Form으로 감싸서 엔터키 누르면 즉시 로그인 처리
         with st.form("login_form", clear_on_submit=False):
             st.subheader("로그인")
             login_id = st.text_input("아이디", key="login_id").strip()
@@ -177,10 +218,10 @@ if st.session_state.user_id is None:
                     new_user = pd.DataFrame([{"user_id": new_id, "password": new_pw, "nickname": new_nick, "bio": new_bio}])
                     users_df = pd.concat([users_df, new_user], ignore_index=True)
                     save_data(users_df, USERS_FILE)
-                    st.success("회원가입이 완료되었습니다! 로그인 탭에서 로그인해 주세요.")
+                    st.success("회원가입 완료! 로그인 탭에서 로그인해 주세요.")
 
 else:
-    # --- 로그인 후 메인 앱 화면 ---
+    # --- 메인 앱 화면 ---
     st.sidebar.title(f"⚡ {st.session_state.nickname}")
     st.sidebar.caption(f"ID: {st.session_state.user_id}")
     if st.sidebar.button("로그아웃"):
@@ -190,9 +231,11 @@ else:
         
     st.markdown("<div class='main-title'>⚡ 운동일지</div>", unsafe_allow_html=True)
     
-    tab_workout, tab_feed, tab_friends, tab_history = st.tabs([
-        "🔥 운동 기록", "📱 피드", "👥 팔로우", "📅 내 일지"
+    tab_workout, tab_timer, tab_feed, tab_friends, tab_history = st.tabs([
+        "🔥 운동 기록", "⏱️ 휴식 타이머", "📱 피드", "👥 팔로우", "📅 내 일지"
     ])
+    
+    workouts_df = load_workouts()
     
     # TAB 1: 운동 기록 작성
     with tab_workout:
@@ -213,10 +256,30 @@ else:
             
         if selected_exercises:
             st.divider()
+            
+            # 지난 기록 가이드 자동 조회 함수
+            my_past_workouts = workouts_df[workouts_df["user_id"] == st.session_state.user_id]
+            
             with st.form("workout_input_form"):
                 workout_entries = []
                 for ex in selected_exercises:
                     st.write(f"🏋️ **{ex}**")
+                    
+                    # 지난 회차 수행 기록 자동 안내 (점진적 과부하 가이드)
+                    ex_past = my_past_workouts[my_past_workouts["exercise"] == ex]
+                    if not ex_past.empty:
+                        max_w = ex_past["weight"].max()
+                        max_r = ex_past[ex_past["weight"] == max_w]["reps"].max()
+                        last_date = ex_past["date"].max()
+                        st.markdown(f"""
+                        <div class="prev-record-card">
+                            <span class="prev-record-title">💡 지난 최다 기록 ({last_date})</span>
+                            <span class="prev-record-value">{max_w} kg × {max_r} 회</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.caption("💡 첫 수행 종목입니다. 자신에게 맞는 첫 무게를 설정하세요.")
+                    
                     c1, c2, c3 = st.columns(3)
                     with c1: num_sets = st.number_input(f"세트 ({ex})", 1, 10, 3, key=f"s_{ex}")
                     with c2: weight = st.number_input(f"무게kg ({ex})", 0.0, step=2.5, value=20.0, key=f"w_{ex}")
@@ -239,7 +302,6 @@ else:
                 is_private = st.checkbox("🔒 나만 보기 (팔로우 피드에 비공개)")
                 
                 if st.form_submit_button("오늘 운동 저장 완료! 💪"):
-                    workouts_df = load_workouts()
                     for entry in workout_entries:
                         entry["memo"] = memo
                         entry["is_private"] = "True" if is_private else "False"
@@ -250,11 +312,43 @@ else:
                     st.balloons()
                     st.success("운동 기록이 성공적으로 저장되었습니다!")
 
-    # TAB 2: 팔로우 소셜 피드
+    # TAB 2: 세트 간 휴식 타이머
+    with tab_timer:
+        st.subheader("⏱️ 세트 간 휴식 카운트다운")
+        st.caption("원하는 휴식 시간을 누르면 자동으로 카운트다운이 시작됩니다.")
+        
+        tc1, tc2, tc3, tc4 = st.columns(4)
+        set_seconds = 0
+        with tc1:
+            if st.button("60초"): set_seconds = 60
+        with tc2:
+            if st.button("90초"): set_seconds = 90
+        with tc3:
+            if st.button("120초"): set_seconds = 120
+        with tc4:
+            if st.button("180초"): set_seconds = 180
+            
+        custom_sec = st.number_input("직접 초 입력", min_value=0, step=10, value=0)
+        if custom_sec > 0 and st.button("타이머 시작"):
+            set_seconds = custom_sec
+            
+        if set_seconds > 0:
+            timer_placeholder = st.empty()
+            progress_bar = st.progress(1.0)
+            
+            for remaining in range(set_seconds, -1, -1):
+                mins, secs = divmod(remaining, 60)
+                timer_placeholder.markdown(f"<h1 style='text-align: center; color: #38BDF8; font-size: 4rem; font-weight: 900;'>{mins:02d}:{secs:02d}</h1>", unsafe_allow_html=True)
+                progress_bar.progress(remaining / set_seconds)
+                time.sleep(1)
+            
+            timer_placeholder.markdown("<h1 style='text-align: center; color: #4ADE80; font-size: 3rem;'>🔥 휴식 끝! 다음 세트 시작!</h1>", unsafe_allow_html=True)
+            st.balloons()
+
+    # TAB 3: 팔로우 소셜 피드
     with tab_feed:
         st.subheader("📱 팔로워 오운완 피드")
         follows_df = load_follows()
-        workouts_df = load_workouts()
         
         my_followings = follows_df[follows_df["follower_id"] == st.session_state.user_id]["following_id"].tolist()
         feed_users = set(my_followings + [st.session_state.user_id])
@@ -284,7 +378,7 @@ else:
         else:
             st.info("팔로워들의 운동 기록이 없습니다. 친구를 팔로우하거나 오늘 첫 기록을 작성해 보세요!")
 
-    # TAB 3: 친구 찾기 & 팔로우 관리
+    # TAB 4: 친구 찾기 & 팔로우 관리
     with tab_friends:
         st.subheader("👥 친구 찾기 및 팔로우")
         users_df = load_users()
@@ -336,10 +430,9 @@ else:
         else:
             st.caption("아직 팔로우한 친구가 없습니다.")
 
-    # TAB 4: 내 일지 전용 조회
+    # TAB 5: 내 일지 전용 조회
     with tab_history:
         st.subheader("📅 내 개인 운동 기록")
-        workouts_df = load_workouts()
         my_df = workouts_df[workouts_df["user_id"] == st.session_state.user_id]
         
         if not my_df.empty:
