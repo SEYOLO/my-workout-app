@@ -10,8 +10,8 @@ import extra_streamlit_components as stx
 # 1. 페이지 기본 설정
 st.set_page_config(page_title="WORKOUT", page_icon="⚡", layout="centered", initial_sidebar_state="collapsed")
 
-# 쿠키 매니저 초기화
-@st.cache_resource(experimental_allow_widgets=True)
+# 쿠키 매니저 초기화 (Streamlit 최신 버전 데코레이터 호환성 완료)
+@st.cache_resource
 def get_cookie_manager():
     return stx.CookieManager()
 
