@@ -20,7 +20,7 @@ if not os.path.exists(PROFILE_DIR):
 
 APP_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
 
-# 모바일 대응 커스텀 CSS (타이머 가로 정렬 & 세트별 입력 레이아웃)
+# 모바일 대응 커스텀 CSS
 st.markdown(f"""
 <head>
     <link rel="apple-touch-icon" href="{APP_ICON_URL}">
@@ -84,16 +84,7 @@ st.markdown(f"""
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
     }}
 
-    /* 단일 폼 박스 */
-    div[data-testid="stForm"] {{
-        background: #14161D !important;
-        border: 1px solid #222634 !important;
-        border-radius: 16px !important;
-        padding: 18px !important;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
-    }}
-
-    .stButton > button, div[data-testid="stForm"] button {{
+    .stButton > button {{
         width: 100% !important;
         background: #2563EB !important;
         color: #FFFFFF !important;
@@ -119,14 +110,6 @@ st.markdown(f"""
         background: rgba(245, 158, 11, 0.05);
         border: 1px solid rgba(245, 158, 11, 0.2);
         border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.83rem; color: #FBBF24;
-    }}
-
-    /* 세트별 입력 레이아웃 가공 */
-    .set-row-title {{
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: #38BDF8;
-        margin-top: 6px;
     }}
 
     @media (max-width: 640px) {{
@@ -329,7 +312,7 @@ else:
     
     workouts_df = load_workouts()
     
-    # TAB 1: 세트별 개별 무게/횟수 입력 (점진적 과부하 시스템)
+    # TAB 1: 운동 기록 작성 (엔터키 자동 저장 방지 적용)
     with tab_workout:
         st.subheader("오늘의 운동")
         today_date = st.date_input("운동 날짜", datetime.now())
@@ -363,73 +346,71 @@ else:
             st.divider()
             my_past_workouts = workouts_df[workouts_df["user_id"] == st.session_state.user_id]
             
-            with st.form("workout_input_form"):
-                workout_entries = []
-                for ex in selected_exercises:
-                    st.write(f"🏋️ **{ex}**")
-                    
-                    tip_text = EXERCISE_TIPS.get(ex, "자극 부위에 집중하여 바른 자세로 수행합니다.")
-                    yt_link = get_yt_url(ex)
+            # 폼을 제거하고 일반 컨테이너 방식으로 변경하여 엔터키 저장 현상 완전 차단
+            workout_entries = []
+            for ex in selected_exercises:
+                st.write(f"🏋️ **{ex}**")
+                
+                tip_text = EXERCISE_TIPS.get(ex, "자극 부위에 집중하여 바른 자세로 수행합니다.")
+                yt_link = get_yt_url(ex)
+                st.markdown(f"""
+                <div class="guide-box">
+                    📌 <b>팁:</b> {tip_text} <a href="{yt_link}" target="_blank" style="color: #38BDF8; margin-left: 8px; font-weight: 600; text-decoration: none;">[▶️ 자세 영상]</a>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                ex_past = my_past_workouts[my_past_workouts["exercise"] == ex]
+                if not ex_past.empty:
+                    max_w = ex_past["weight"].max()
+                    max_r = ex_past[ex_past["weight"] == max_w]["reps"].max()
+                    last_date = ex_past["date"].max()
                     st.markdown(f"""
-                    <div class="guide-box">
-                        📌 <b>팁:</b> {tip_text} <a href="{yt_link}" target="_blank" style="color: #38BDF8; margin-left: 8px; font-weight: 600; text-decoration: none;">[▶️ 자세 영상]</a>
+                    <div class="prev-record-card">
+                        <span class="prev-record-title">💡 지난 최고 기록 ({last_date})</span>
+                        <span class="prev-record-value">{max_w} kg × {max_r} 회</span>
                     </div>
                     """, unsafe_allow_html=True)
-                    
-                    ex_past = my_past_workouts[my_past_workouts["exercise"] == ex]
-                    if not ex_past.empty:
-                        max_w = ex_past["weight"].max()
-                        max_r = ex_past[ex_past["weight"] == max_w]["reps"].max()
-                        last_date = ex_past["date"].max()
-                        st.markdown(f"""
-                        <div class="prev-record-card">
-                            <span class="prev-record-title">💡 지난 최고 기록 ({last_date})</span>
-                            <span class="prev-record-value">{max_w} kg × {max_r} 회</span>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.caption("💡 첫 수행 종목입니다.")
-                    
-                    num_sets = st.number_input(f"총 세트 수 ({ex})", 1, 10, 3, key=f"setcnt_{ex}")
-                    
-                    # 각 세트별 개별 무게/횟수 독립 입력창 생성 (점진적 과부하 반영)
-                    for s in range(1, num_sets + 1):
-                        sc1, sc2 = st.columns(2)
-                        with sc1:
-                            w = st.number_input(f"{s}세트 무게(kg)", 0.0, step=2.5, value=20.0, key=f"w_{ex}_{s}")
-                        with sc2:
-                            r = st.number_input(f"{s}세트 횟수(reps)", 1, value=10, key=f"r_{ex}_{s}")
-                            
-                        workout_entries.append({
-                            "date": str(today_date),
-                            "user_id": st.session_state.user_id,
-                            "nickname": st.session_state.nickname,
-                            "routine": routine_type,
-                            "exercise": ex,
-                            "set_num": s,
-                            "weight": w,
-                            "reps": r
-                        })
-                    st.write("---")
+                else:
+                    st.caption("💡 첫 수행 종목입니다.")
                 
-                memo = st.text_input("오늘의 메모", placeholder="컨디션, 특이사항 등")
-                is_private = st.checkbox("🔒 비공개로 저장")
+                num_sets = st.number_input(f"총 세트 수 ({ex})", 1, 10, 3, key=f"setcnt_{ex}")
                 
-                if st.form_submit_button("저장 완료"):
-                    for entry in workout_entries:
-                        entry["memo"] = memo
-                        entry["is_private"] = "True" if is_private else "False"
-                    
-                    new_df = pd.DataFrame(workout_entries)
-                    workouts_df = pd.concat([workouts_df, new_df], ignore_index=True)
-                    save_data(workouts_df, WORKOUT_FILE)
-                    st.success("성공적으로 저장되었습니다!")
+                for s in range(1, num_sets + 1):
+                    sc1, sc2 = st.columns(2)
+                    with sc1:
+                        w = st.number_input(f"{s}세트 무게(kg)", 0.0, step=2.5, value=20.0, key=f"w_{ex}_{s}")
+                    with sc2:
+                        r = st.number_input(f"{s}세트 횟수(reps)", 1, value=10, key=f"r_{ex}_{s}")
+                        
+                    workout_entries.append({
+                        "date": str(today_date),
+                        "user_id": st.session_state.user_id,
+                        "nickname": st.session_state.nickname,
+                        "routine": routine_type,
+                        "exercise": ex,
+                        "set_num": s,
+                        "weight": w,
+                        "reps": r
+                    })
+                st.write("---")
+            
+            memo = st.text_input("오늘의 메모", placeholder="컨디션, 특이사항 등")
+            is_private = st.checkbox("🔒 비공개로 저장")
+            
+            if st.button("💾 오늘 운동 저장 완료"):
+                for entry in workout_entries:
+                    entry["memo"] = memo
+                    entry["is_private"] = "True" if is_private else "False"
+                
+                new_df = pd.DataFrame(workout_entries)
+                workouts_df = pd.concat([workouts_df, new_df], ignore_index=True)
+                save_data(workouts_df, WORKOUT_FILE)
+                st.success("성공적으로 저장되었습니다!")
 
-    # TAB 2: 휴식 타이머 (모바일 가로 1줄 정렬 보장)
+    # TAB 2: 휴식 타이머
     with tab_timer:
         st.subheader("⏱️ 휴식 타이머")
         
-        # 모바일 화면에서도 가로 정렬을 강제하기 위한 4열 컬럼
         t_cols = st.columns(4)
         target_sec = 0
         with t_cols[0]:
@@ -466,7 +447,7 @@ else:
                 timer_box.markdown("<h1 style='text-align: center; color: #4ADE80; font-size: 1.8rem; font-weight: 700;'>🔥 휴식 끝! 다음 세트 시작!</h1>", unsafe_allow_html=True)
                 st.session_state.timer_running = False
 
-    # TAB 3: 팔로우 피드
+    # TAB 3: 팔로우 피드 (기록 삭제 기능 연동)
     with tab_feed:
         st.subheader("📱 팔로워 피드")
         follows_df = load_follows()
@@ -492,7 +473,6 @@ else:
                     total_vol = (group["weight"] * group["reps"]).sum()
                     st.write(f"**총 볼륨:** `{total_vol:,.0f} kg`")
                     
-                    # 세트별 상세 기록 표출
                     ex_list = group["exercise"].unique()
                     for ex in ex_list:
                         ex_sub = group[group["exercise"] == ex]
@@ -502,6 +482,14 @@ else:
                     memo_val = group["memo"].iloc[0]
                     if pd.notna(memo_val) and str(memo_val).strip():
                         st.caption(f"💬 {memo_val}")
+                        
+                    # 본인 작성 기록 삭제 기능
+                    if is_me:
+                        if st.button("🗑️ 해당 날짜 기록 삭제", key=f"del_{date}_{uid}"):
+                            workouts_df = workouts_df[~((workouts_df["user_id"] == uid) & (workouts_df["date"] == date))]
+                            save_data(workouts_df, WORKOUT_FILE)
+                            st.success("기록이 삭제되었습니다.")
+                            st.rerun()
         else:
             st.info("기록이 없습니다.")
 
@@ -586,7 +574,7 @@ else:
         else:
             st.caption("팔로우 중인 친구가 없습니다.")
 
-    # TAB 6: 내 프로필 수정 및 리포트
+    # TAB 6: 프로필 관리 & 기록 삭제/수정 리포트
     with tab_profile:
         st.subheader("⚙️ 프로필 관리 & 리포트")
         users_df = load_users()
@@ -626,7 +614,7 @@ else:
                         st.rerun()
 
         st.divider()
-        st.subheader("📊 내 성장 리포트")
+        st.subheader("📊 내 성장 리포트 & 기록 관리")
         my_df = workouts_df[workouts_df["user_id"] == st.session_state.user_id]
         if not my_df.empty:
             my_df["volume"] = my_df["weight"] * my_df["reps"]
@@ -635,5 +623,20 @@ else:
             
             vol_by_date = my_df.groupby("date")["volume"].sum().reset_index()
             st.line_chart(vol_by_date.set_index("date"))
+            
+            st.write("### 내 상세 운동 기록 및 삭제")
+            my_grouped = my_df.groupby("date")
+            for d, d_group in sorted(my_grouped, key=lambda x: x[0], reverse=True):
+                with st.expander(f"📅 {d} 기록 상세 보기"):
+                    for idx, row in d_group.iterrows():
+                        rc1, rc2 = st.columns([4, 1])
+                        with rc1:
+                            st.write(f"• **{row['exercise']}** - {row['set_num']}세트: {row['weight']}kg × {row['reps']}회")
+                        with rc2:
+                            if st.button("삭제", key=f"del_single_{idx}"):
+                                workouts_df = workouts_df.drop(idx)
+                                save_data(workouts_df, WORKOUT_FILE)
+                                st.success("선택한 세트 기록 삭제 완료")
+                                st.rerun()
         else:
             st.info("등록된 기록이 없습니다.")
