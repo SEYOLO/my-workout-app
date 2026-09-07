@@ -5,9 +5,17 @@ import time
 import random
 from datetime import datetime
 import urllib.parse
+import extra_streamlit_components as stx
 
 # 1. 페이지 기본 설정
 st.set_page_config(page_title="WORKOUT", page_icon="⚡", layout="centered", initial_sidebar_state="collapsed")
+
+# 쿠키 매니저 초기화
+@st.cache_resource(experimental_allow_widgets=True)
+def get_cookie_manager():
+    return stx.CookieManager()
+
+cookie_manager = get_cookie_manager()
 
 USERS_FILE = "users.csv"
 FOLLOWS_FILE = "follows.csv"
@@ -16,7 +24,22 @@ WORKOUT_FILE = "workout_data.csv"
 APP_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
 AVATAR_OPTIONS = ["🦁 사자", "🐯 호랑이", "🐻 곰", "🐺 늑대", "🦅 독수리", "🦈 상어", "🦍 고릴라", "⚡ 번개"]
 
-# 모바일 전용 CSS
+# 세션 기본값 설정 (테마 및 로그인 상태)
+if "theme_mode" not in st.session_state: st.session_state.theme_mode = "dark"
+if "user_id" not in st.session_state: st.session_state.user_id = None
+if "nickname" not in st.session_state: st.session_state.nickname = None
+if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
+if "timer_running" not in st.session_state: st.session_state.timer_running = False
+if "rec_list" not in st.session_state: st.session_state.rec_list = []
+
+# 테마별 동적 CSS 스타일
+is_light = (st.session_state.theme_mode == "light")
+bg_color = "#F8FAFC" if is_light else "#0D0E12"
+text_color = "#0F172A" if is_light else "#E2E8F0"
+card_bg = "#FFFFFF" if is_light else "rgba(30, 41, 59, 0.4)"
+card_border = "#E2E8F0" if is_light else "rgba(56, 189, 248, 0.2)"
+sub_text = "#64748B" if is_light else "#94A3B8"
+
 st.markdown(f"""
 <head>
     <link rel="apple-touch-icon" href="{APP_ICON_URL}">
@@ -31,8 +54,8 @@ st.markdown(f"""
     }}
 
     .stApp {{
-        background: #0D0E12;
-        color: #E2E8F0;
+        background: {bg_color} !important;
+        color: {text_color} !important;
     }}
 
     .block-container {{
@@ -43,7 +66,7 @@ st.markdown(f"""
     #splash-screen {{
         position: fixed;
         top: 0; left: 0; width: 100vw; height: 100vh;
-        background-color: #0D0E12;
+        background-color: {bg_color};
         z-index: 999999;
         display: flex;
         flex-direction: column;
@@ -57,7 +80,7 @@ st.markdown(f"""
         font-size: 2.5rem;
         font-weight: 900;
         letter-spacing: -0.06em;
-        color: #F8FAFC;
+        color: {text_color};
         animation: pulseLogo 1.0s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
     }}
 
@@ -83,15 +106,15 @@ st.markdown(f"""
         font-size: 1.6rem;
         font-weight: 800;
         letter-spacing: -0.05em;
-        color: #F8FAFC;
+        color: {text_color};
         text-align: center;
         margin-top: 0.1rem;
         margin-bottom: 0.6rem;
     }}
 
     .header-profile-card {{
-        background: rgba(30, 41, 59, 0.4);
-        border: 1px solid rgba(56, 189, 248, 0.2);
+        background: {card_bg};
+        border: 1px solid {card_border};
         border-radius: 12px;
         padding: 8px 12px;
         display: flex;
@@ -118,17 +141,18 @@ st.markdown(f"""
     .header-user-name {{
         font-size: 0.95rem;
         font-weight: 700;
-        color: #F8FAFC;
+        color: {text_color};
         line-height: 1.2;
     }}
     .header-user-id {{
         font-size: 0.75rem;
-        color: #64748B;
+        color: {sub_text};
     }}
 
-    h1 {{ font-size: 1.5rem !important; }}
-    h2 {{ font-size: 1.2rem !important; margin-top: 0.8rem !important; margin-bottom: 0.5rem !important; }}
-    h3 {{ font-size: 1.0rem !important; margin-top: 0.6rem !important; margin-bottom: 0.4rem !important; }}
+    h1 {{ font-size: 1.5rem !important; color: {text_color} !important; }}
+    h2 {{ font-size: 1.2rem !important; margin-top: 0.8rem !important; margin-bottom: 0.5rem !important; color: {text_color} !important; }}
+    h3 {{ font-size: 1.0rem !important; margin-top: 0.6rem !important; margin-bottom: 0.4rem !important; color: {text_color} !important; }}
+    p, span, div {{ color: {text_color}; }}
 
     .stButton > button {{
         width: 100% !important;
@@ -161,7 +185,7 @@ st.markdown(f"""
         display: flex; align-items: center; justify-content: space-between;
     }}
     .prev-record-title {{ font-size: 0.8rem; color: #38BDF8; font-weight: 600; }}
-    .prev-record-value {{ font-size: 0.88rem; color: #F8FAFC; font-weight: 700; }}
+    .prev-record-value {{ font-size: 0.88rem; color: {text_color}; font-weight: 700; }}
     
     .guide-box {{
         background: rgba(245, 158, 11, 0.05);
@@ -315,7 +339,6 @@ ANATOMICAL_POOL = {
 
 ALL_EXERCISES = list(set(sum(ANATOMICAL_POOL.values(), [])))
 
-# 강력 무작위 조합 알고리즘
 def generate_capped_routine(selected_parts, target_options):
     recommended = []
     num_parts = len(selected_parts)
@@ -355,11 +378,13 @@ def generate_capped_routine(selected_parts, target_options):
             
     return list(dict.fromkeys(recommended))[:5]
 
-if "user_id" not in st.session_state: st.session_state.user_id = None
-if "nickname" not in st.session_state: st.session_state.nickname = None
-if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
-if "timer_running" not in st.session_state: st.session_state.timer_running = False
-if "rec_list" not in st.session_state: st.session_state.rec_list = []
+# --- [자동 로그인 쿠키 감지 로직] ---
+if st.session_state.user_id is None:
+    saved_user = cookie_manager.get('workout_auth_user')
+    saved_nick = cookie_manager.get('workout_auth_nick')
+    if saved_user and saved_nick:
+        st.session_state.user_id = saved_user
+        st.session_state.nickname = saved_nick
 
 # --- [로그인 / 회원가입 랜딩] ---
 if st.session_state.user_id is None:
@@ -373,6 +398,7 @@ if st.session_state.user_id is None:
             st.write("### 로그인")
             login_id = st.text_input("아이디", key="l_id").strip()
             login_pw = st.text_input("비밀번호", type="password", key="l_pw").strip()
+            auto_login_check = st.checkbox("자동 로그인 유지", value=True)
             submit_login = st.form_submit_button("시작하기")
             
             if submit_login:
@@ -380,6 +406,10 @@ if st.session_state.user_id is None:
                 if not user_match.empty:
                     st.session_state.user_id = login_id
                     st.session_state.nickname = user_match.iloc[0]["nickname"]
+                    
+                    if auto_login_check:
+                        cookie_manager.set('workout_auth_user', login_id, expires_at=datetime(2030, 1, 1))
+                        cookie_manager.set('workout_auth_nick', user_match.iloc[0]["nickname"], expires_at=datetime(2030, 1, 1))
                     st.rerun()
                 else:
                     st.error("아이디 또는 비밀번호가 올바르지 않습니다.")
@@ -426,10 +456,10 @@ if st.session_state.user_id is None:
             st.rerun()
 
 else:
-    # --- [상단 헤더 모듈] ---
+    # --- [상단 헤더 모듈 & 테마 스위처] ---
     my_avatar = get_user_avatar(st.session_state.user_id)
     
-    col_card, col_btn = st.columns([3.5, 1.2])
+    col_card, col_theme, col_btn = st.columns([2.8, 1.0, 1.2])
     with col_card:
         st.markdown(f"""
         <div class="header-profile-card">
@@ -440,8 +470,15 @@ else:
             </div>
         </div>
         """, unsafe_allow_html=True)
+    with col_theme:
+        theme_icon = "☀️" if is_light else "🌙"
+        if st.button(theme_icon, key="btn_theme_toggle"):
+            st.session_state.theme_mode = "dark" if is_light else "light"
+            st.rerun()
     with col_btn:
         if st.button("로그아웃", key="btn_logout"):
+            cookie_manager.delete('workout_auth_user')
+            cookie_manager.delete('workout_auth_nick')
             st.session_state.user_id = None
             st.session_state.nickname = None
             st.rerun()
@@ -493,7 +530,6 @@ else:
                     else:
                         target_options[p] = "기본"
                 
-                # 조합 생성
                 curr_parts_str = ",".join(selected_parts) + "_" + str(target_options)
                 if not st.session_state.rec_list or st.session_state.get("last_parts") != curr_parts_str:
                     st.session_state.rec_list = generate_capped_routine(selected_parts, target_options)
@@ -634,7 +670,7 @@ else:
 
     # TAB 3: 팔로우 피드
     with tab_feed:
-        st.markdown("### 📱 팔로워 피드")
+        st.markdown("### 📱 친구 운동일지 피드")
         
         accepted_followings = follows_df[
             (follows_df["follower_id"] == st.session_state.user_id) & 
@@ -657,7 +693,7 @@ else:
                 
                 with st.expander(f"{u_avatar} {card_title} - [{routine}]", expanded=True):
                     total_vol = (group["weight"] * group["reps"]).sum()
-                    st.write(f"**총 볼륨:** `{total_vol:,.0f} kg`")
+                    st.write(f"**총 누적 볼륨:** `{total_vol:,.0f} kg`")
                     
                     ex_list = group["exercise"].unique()
                     for ex in ex_list:
@@ -667,16 +703,16 @@ else:
                         
                     memo_val = group["memo"].iloc[0]
                     if pd.notna(memo_val) and str(memo_val).strip():
-                        st.caption(f"💬 {memo_val}")
+                        st.caption(f"💬 **메모:** {memo_val}")
                         
                     if is_me:
-                        if st.button("🗑️ 해당 날짜 기록 삭제", key=f"del_{date}_{uid}"):
+                        if st.button("🗑️ 기록 삭제", key=f"del_{date}_{uid}"):
                             workouts_df = workouts_df[~((workouts_df["user_id"] == uid) & (workouts_df["date"] == date))]
                             save_data(workouts_df, WORKOUT_FILE)
                             st.success("기록이 삭제되었습니다.")
                             st.rerun()
         else:
-            st.info("표시할 피드 기록이 없습니다.")
+            st.info("팔로우한 친구의 공개 운동일지가 없습니다. 팔로우 탭에서 친구를 추가해 보세요!")
 
     # TAB 4: 팔로워 출석 달력
     with tab_calendar:
@@ -721,15 +757,15 @@ else:
         ]
         
         if not pending_requests.empty:
-            st.warning(f"🔔 **팔로우 요청 ({len(pending_requests)}건)**")
+            st.warning(f"🔔 **받은 팔로우 요청 ({len(pending_requests)}건)**")
             for idx, req in pending_requests.iterrows():
                 req_user = users_df[users_df["user_id"] == req["follower_id"]]
                 req_nick = req_user.iloc[0]["nickname"] if not req_user.empty else req["follower_id"]
                 req_avatar = get_user_avatar(req["follower_id"])
                 
-                col_req1, col_req2, col_req3 = st.columns([3, 1, 1])
+                col_req1, col_req2, col_req3 = st.columns([2.5, 1, 1])
                 with col_req1:
-                    st.write(f"• {req_avatar} **{req_nick}** 님의 요청")
+                    st.write(f"• {req_avatar} **{req_nick}**")
                 with col_req2:
                     if st.button("수락", key=f"acc_{idx}"):
                         follows_df.loc[idx, "status"] = "accepted"
@@ -744,10 +780,10 @@ else:
                         st.rerun()
             st.divider()
 
-        st.markdown("### 🔍 친구 검색")
-        search_nick = st.text_input("닉네임 검색", placeholder="친구 닉네임 입력").strip()
+        st.markdown("### 🔍 친구 검색 및 신청")
+        search_nick = st.text_input("닉네임 또는 아이디 검색", placeholder="친구 닉네임 입력").strip()
         if search_nick:
-            target_user = users_df[users_df["nickname"] == search_nick]
+            target_user = users_df[(users_df["nickname"] == search_nick) | (users_df["user_id"] == search_nick)]
             if not target_user.empty:
                 t_id = target_user.iloc[0]["user_id"]
                 t_nick = target_user.iloc[0]["nickname"]
@@ -757,64 +793,80 @@ else:
                 if t_id == st.session_state.user_id:
                     st.warning("본인 계정입니다.")
                 else:
-                    st.write(f"### {t_avatar} **{t_nick}**")
-                    if pd.notna(t_bio) and str(t_bio).strip():
-                        st.caption(f"💬 {t_bio}")
-                    
+                    col_s1, col_s2 = st.columns([3, 1.5])
+                    with col_s1:
+                        st.write(f"{t_avatar} **{t_nick}** (`@{t_id}`)")
+                        if pd.notna(t_bio) and str(t_bio).strip():
+                            st.caption(f"💬 {t_bio}")
+                            
                     f_match = follows_df[
                         (follows_df["follower_id"] == st.session_state.user_id) & 
                         (follows_df["following_id"] == t_id)
                     ]
                     
-                    if not f_match.empty:
-                        curr_status = f_match.iloc[0]["status"]
-                        if curr_status == "pending":
-                            st.info("⏳ 수락 대기 중입니다.")
-                            if st.button("요청 취소"):
-                                follows_df = follows_df[~(
-                                    (follows_df["follower_id"] == st.session_state.user_id) & 
-                                    (follows_df["following_id"] == t_id)
-                                )]
+                    with col_s2:
+                        if not f_match.empty:
+                            curr_status = f_match.iloc[0]["status"]
+                            if curr_status == "pending":
+                                st.info("⏳ 승인 대기 중")
+                                if st.button("요청 취소", key=f"cancel_search_{t_id}"):
+                                    follows_df = follows_df[~(
+                                        (follows_df["follower_id"] == st.session_state.user_id) & 
+                                        (follows_df["following_id"] == t_id)
+                                    )]
+                                    save_data(follows_df, FOLLOWS_FILE)
+                                    st.rerun()
+                            elif curr_status == "accepted":
+                                st.success("✅ 팔로우 중")
+                                if st.button("언팔로우", key=f"unfollow_search_{t_id}"):
+                                    follows_df = follows_df[~(
+                                        (follows_df["follower_id"] == st.session_state.user_id) & 
+                                        (follows_df["following_id"] == t_id)
+                                    )]
+                                    save_data(follows_df, FOLLOWS_FILE)
+                                    st.rerun()
+                        else:
+                            if st.button("➕ 팔로우 요청", key=f"req_search_{t_id}"):
+                                new_follow = pd.DataFrame([{
+                                    "follower_id": st.session_state.user_id, 
+                                    "following_id": t_id,
+                                    "status": "pending"
+                                }])
+                                follows_df = pd.concat([follows_df, new_follow], ignore_index=True)
                                 save_data(follows_df, FOLLOWS_FILE)
+                                st.success("요청 보냄!")
                                 st.rerun()
-                        elif curr_status == "accepted":
-                            if st.button("언팔로우"):
-                                follows_df = follows_df[~(
-                                    (follows_df["follower_id"] == st.session_state.user_id) & 
-                                    (follows_df["following_id"] == t_id)
-                                )]
-                                save_data(follows_df, FOLLOWS_FILE)
-                                st.success("언팔로우 완료")
-                                st.rerun()
-                    else:
-                        if st.button("팔로우 요청"):
-                            new_follow = pd.DataFrame([{
-                                "follower_id": st.session_state.user_id, 
-                                "following_id": t_id,
-                                "status": "pending"
-                            }])
-                            follows_df = pd.concat([follows_df, new_follow], ignore_index=True)
-                            save_data(follows_df, FOLLOWS_FILE)
-                            st.success("팔로우 요청을 보냈습니다!")
-                            st.rerun()
             else:
                 st.error("유저를 찾을 수 없습니다.")
 
         st.divider()
-        st.markdown("### 내 팔로잉 (승인됨)")
-        my_follows = follows_df[
-            (follows_df["follower_id"] == st.session_state.user_id) & 
-            (follows_df["status"] == "accepted")
-        ]
-        if not my_follows.empty:
-            followed_users = users_df[users_df["user_id"].isin(my_follows["following_id"])]
-            for _, f_row in followed_users.iterrows():
-                f_id = f_row['user_id']
-                f_nk = f_row['nickname']
+        st.markdown("### 내 팔로잉 현황")
+        my_all_follows = follows_df[follows_df["follower_id"] == st.session_state.user_id]
+        
+        if not my_all_follows.empty:
+            for idx, f_row in my_all_follows.iterrows():
+                f_id = f_row['following_id']
+                f_status = f_row['status']
+                
+                f_user = users_df[users_df["user_id"] == f_id]
+                f_nk = f_user.iloc[0]["nickname"] if not f_user.empty else f_id
                 f_av = get_user_avatar(f_id)
-                st.write(f"• {f_av} **{f_nk}** (`{f_id}`)")
+                
+                fc1, fc2, fc3 = st.columns([2.5, 1.2, 1])
+                with fc1:
+                    st.write(f"• {f_av} **{f_nk}** (`@{f_id}`)")
+                with fc2:
+                    if f_status == "pending":
+                        st.info("⏳ 승인 대기")
+                    else:
+                        st.success("✅ 팔로우 중")
+                with fc3:
+                    if st.button("취소", key=f"del_follow_list_{f_id}"):
+                        follows_df = follows_df.drop(idx)
+                        save_data(follows_df, FOLLOWS_FILE)
+                        st.rerun()
         else:
-            st.caption("팔로우 승인된 친구가 없습니다.")
+            st.caption("팔로우 중이거나 요청한 친구가 없습니다.")
 
     # TAB 6: 프로필 관리 & 리포트
     with tab_profile:
