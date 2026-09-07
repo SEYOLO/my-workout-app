@@ -6,133 +6,89 @@ import random
 from datetime import datetime
 import urllib.parse
 
-# 1. 페이지 기본 설정 및 모던 패션 브랜드풍 스타일링
-st.set_page_config(page_title="운동일지 ⚡", page_icon="⚡", layout="centered", initial_sidebar_state="collapsed")
+# 1. 페이지 기본 설정 및 모던 미니멀 스타일링
+st.set_page_config(page_title="WORKOUT", page_icon="⚡", layout="centered", initial_sidebar_state="collapsed")
 
 USERS_FILE = "users.csv"
 FOLLOWS_FILE = "follows.csv"
 WORKOUT_FILE = "workout_data.csv"
 
-# Ultra Dark Glassmorphic Modern UI CSS
+# Minimalistic Modern Dark UI CSS
 st.markdown("""
 <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     * { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }
     
     .stApp {
-        background: #0B0E14;
-        color: #F1F5F9;
+        background: #0D0E12;
+        color: #E2E8F0;
     }
 
-    /* 메인 히어로 브랜딩 타이틀 */
-    .hero-container {
+    /* 상단 미니멀 타이틀 */
+    .brand-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+        color: #F8FAFC;
         text-align: center;
-        padding: 2.5rem 1rem 1.5rem 1rem;
-        background: radial-gradient(circle at top, rgba(56, 189, 248, 0.15) 0%, rgba(11, 14, 20, 0) 70%);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        margin-bottom: 1.8rem;
-    }
-    .hero-logo {
-        font-size: 3rem;
-        font-weight: 900;
-        letter-spacing: -0.06em;
-        background: linear-gradient(135deg, #00F2FE 0%, #4FACFE 50%, #60A5FA 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.3rem;
-        text-shadow: 0 0 30px rgba(56, 189, 248, 0.3);
-    }
-    .hero-subtitle {
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: #94A3B8;
-        letter-spacing: -0.02em;
-    }
-    .hero-tags {
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        margin-top: 1rem;
-        flex-wrap: wrap;
-    }
-    .tag {
-        background: rgba(30, 41, 59, 0.8);
-        border: 1px solid rgba(51, 65, 85, 0.8);
-        color: #38BDF8;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 700;
-    }
-
-    /* 하이라이트 기능 피처 카드 */
-    .feature-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
         margin-top: 1.5rem;
-        margin-bottom: 1rem;
+        margin-bottom: 0.2rem;
     }
-    .feature-card {
-        background: #131722;
-        border: 1px solid #1E293B;
-        border-radius: 12px;
-        padding: 14px 10px;
+    .brand-sub {
+        font-size: 0.85rem;
+        color: #64748B;
         text-align: center;
-    }
-    .feature-icon { font-size: 1.4rem; margin-bottom: 4px; }
-    .feature-title { font-size: 0.8rem; font-weight: 700; color: #E2E8F0; }
-    .feature-desc { font-size: 0.7rem; color: #64748B; margin-top: 2px; }
-
-    /* 고급 카드 컨테이너 */
-    div[data-testid="stForm"], div.stExpander {
-        background: #131722 !important;
-        border: 1px solid #1E293B !important;
-        border-radius: 18px !important;
-        padding: 22px !important;
-        box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7) !important;
+        margin-bottom: 2rem;
     }
 
-    /* 터치 버튼 디자인 */
+    /* 단일 랜딩 카드 */
+    div[data-testid="stForm"] {
+        background: #14161D !important;
+        border: 1px solid #222634 !important;
+        border-radius: 16px !important;
+        padding: 24px !important;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    /* 세련된 메인 버튼 */
     .stButton > button, div[data-testid="stForm"] button {
         width: 100% !important;
-        background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+        background: #2563EB !important;
         color: #FFFFFF !important;
         border: none !important;
-        border-radius: 12px !important;
-        padding: 14px 20px !important;
-        font-weight: 800 !important;
-        font-size: 1.05rem !important;
-        letter-spacing: -0.02em !important;
-        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4) !important;
+        border-radius: 10px !important;
+        padding: 12px 20px !important;
+        font-weight: 700 !important;
+        font-size: 0.98rem !important;
         transition: all 0.2s ease !important;
     }
-    .stButton > button:active { transform: scale(0.98); }
+    .stButton > button:hover {
+        background: #1D4ED8 !important;
+    }
 
-    /* 지난 기록 팁 카드 */
+    /* 지난 기록 / 가이드 카드 */
     .prev-record-card {
-        background: rgba(56, 189, 248, 0.08);
-        border: 1px solid rgba(56, 189, 248, 0.25);
-        border-radius: 12px; padding: 12px 16px; margin-bottom: 10px;
+        background: rgba(56, 189, 248, 0.05);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        border-radius: 10px; padding: 10px 14px; margin-bottom: 10px;
         display: flex; align-items: center; justify-content: space-between;
     }
-    .prev-record-title { font-size: 0.85rem; color: #38BDF8; font-weight: 700; }
-    .prev-record-value { font-size: 0.95rem; color: #F8FAFC; font-weight: 800; }
+    .prev-record-title { font-size: 0.82rem; color: #38BDF8; font-weight: 600; }
+    .prev-record-value { font-size: 0.9rem; color: #F8FAFC; font-weight: 700; }
+    
     .guide-box {
-        background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3);
-        border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.85rem; color: #FBBF24;
+        background: rgba(245, 158, 11, 0.05);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.83rem; color: #FBBF24;
     }
 
-    /* 탭 헤더 스타일링 */
-    button[data-baseweb="tab"] { font-size: 0.92rem !important; font-weight: 700 !important; color: #64748B !important; }
-    button[aria-selected="true"] { color: #38BDF8 !important; border-bottom: 2.5px solid #38BDF8 !important; }
+    /* 탭 헤더 디자인 */
+    button[data-baseweb="tab"] { font-size: 0.9rem !important; font-weight: 600 !important; color: #64748B !important; }
+    button[aria-selected="true"] { color: #38BDF8 !important; border-bottom: 2px solid #38BDF8 !important; }
 
     @media (max-width: 640px) {
-        .block-container { padding-left: 0.8rem !important; padding-right: 0.8rem !important; padding-top: 0.5rem !important; }
-        .hero-logo { font-size: 2.5rem; }
-        .feature-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
-        .feature-title { font-size: 0.72rem; }
-        .feature-desc { font-size: 0.62rem; }
+        .block-container { padding-left: 0.9rem !important; padding-right: 0.9rem !important; padding-top: 1rem !important; }
+        .brand-title { font-size: 1.8rem; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -213,88 +169,74 @@ def generate_dynamic_routine(routine_type):
         return random.sample(EXERCISE_POOL["어깨_메인"], 2) + random.sample(EXERCISE_POOL["어깨_서브"], 2) + random.sample([x for x in EXERCISE_POOL["복근/유산소"] if "런닝" in x or "계단" in x or "사이클" in x], 1)
     return []
 
+# 세션 상태 (자동 로그인 / 화면 전환 모드)
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "nickname" not in st.session_state: st.session_state.nickname = None
+if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
 
-# --- [고급 랜딩 메인 화면 (로그인 전)] ---
+# --- [상용 서비스 스타일 단일 로그인/회원가입 랜딩] ---
 if st.session_state.user_id is None:
-    st.markdown("""
-    <div class="hero-container">
-        <div class="hero-logo">WORKOUT ⚡</div>
-        <div class="hero-subtitle">스마트 세트일지 & 소셜 피드 시스템</div>
-        <div class="hero-tags">
-            <span class="tag">#점진적과부하</span>
-            <span class="tag">#동적루틴추천</span>
-            <span class="tag">#소셜출석</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div class='brand-title'>WORKOUT</div>", unsafe_allow_html=True)
+    st.markdown("<div class='brand-sub'>Personal Set Log & Social Feed</div>", unsafe_allow_html=True)
     
-    auth_tab1, auth_tab2 = st.tabs(["🔑 로그인", "📝 회원가입"])
     users_df = load_users()
     
-    with auth_tab1:
-        with st.form("login_form", clear_on_submit=False):
-            st.subheader("계정 접속")
-            login_id = st.text_input("아이디", key="login_id").strip()
-            login_pw = st.text_input("비밀번호", type="password", key="login_pw").strip()
-            submit_login = st.form_submit_button("로그인 (Enter)")
+    if st.session_state.auth_mode == "login":
+        with st.form("clean_login_form"):
+            st.write("### 로그인")
+            login_id = st.text_input("아이디", key="l_id").strip()
+            login_pw = st.text_input("비밀번호", type="password", key="l_pw").strip()
+            
+            submit_login = st.form_submit_button("시작하기")
             
             if submit_login:
                 user_match = users_df[(users_df["user_id"] == login_id) & (users_df["password"] == login_pw)]
                 if not user_match.empty:
+                    # 세션에 로그인 상태 보존 (자동 로그인 작동)
                     st.session_state.user_id = login_id
                     st.session_state.nickname = user_match.iloc[0]["nickname"]
-                    st.success(f"환영합니다, {st.session_state.nickname}님!")
                     st.rerun()
                 else:
-                    st.error("아이디 또는 비밀번호가 일치하지 않습니다.")
+                    st.error("아이디 또는 비밀번호가 올바르지 않습니다.")
+                    
+        col_m1, col_m2 = st.columns([2, 1])
+        with col_m1: st.caption("아직 계정이 없으신가요?")
+        with col_m2:
+            if st.button("회원가입"):
+                st.session_state.auth_mode = "signup"
+                st.rerun()
 
-    with auth_tab2:
-        with st.form("signup_form"):
-            st.subheader("새 계정 생성")
-            new_id = st.text_input("사용할 아이디", key="new_id").strip()
-            new_pw = st.text_input("비밀번호", type="password", key="new_pw").strip()
-            new_nick = st.text_input("앱에서 사용할 닉네임", key="new_nick").strip()
-            new_bio = st.text_input("한 줄 상태메시지 (선택)", key="new_bio", placeholder="예: 3대 500 목표!").strip()
-            submit_signup = st.form_submit_button("회원가입 완료")
+    else:
+        with st.form("clean_signup_form"):
+            st.write("### 회원가입")
+            new_id = st.text_input("아이디", key="s_id").strip()
+            new_pw = st.text_input("비밀번호", type="password", key="s_pw").strip()
+            new_nick = st.text_input("닉네임", key="s_nick").strip()
+            new_bio = st.text_input("한 줄 소개 (선택)", key="s_bio", placeholder="목표나 다짐").strip()
+            
+            submit_signup = st.form_submit_button("가입 완료")
             
             if submit_signup:
                 if not new_id or not new_pw or not new_nick:
-                    st.error("아이디, 비밀번호, 닉네임은 필수 항목입니다.")
+                    st.error("필수 항목을 모두 입력해 주세요.")
                 elif new_id in users_df["user_id"].values:
-                    st.error("이미 존재하는 아이디입니다.")
+                    st.error("이미 사용 중인 아이디입니다.")
                 elif new_nick in users_df["nickname"].values:
                     st.error("이미 사용 중인 닉네임입니다.")
                 else:
                     new_user = pd.DataFrame([{"user_id": new_id, "password": new_pw, "nickname": new_nick, "bio": new_bio}])
                     users_df = pd.concat([users_df, new_user], ignore_index=True)
                     save_data(users_df, USERS_FILE)
-                    st.success("회원가입 완료! 로그인 탭에서 로그인해 주세요.")
-
-    # 앱 하이라이트 기능 안내 피처 카드
-    st.markdown("""
-    <div class="feature-grid">
-        <div class="feature-card">
-            <div class="feature-icon">🎲</div>
-            <div class="feature-title">동적 루틴</div>
-            <div class="feature-desc">매일 새로운 자극 조합</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">⏱️</div>
-            <div class="feature-title">휴식 타이머</div>
-            <div class="feature-desc">세트간 원클릭 측정</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">📱</div>
-            <div class="feature-title">소셜 피드</div>
-            <div class="feature-desc">팔로워 출석 달력</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+                    st.success("회원가입이 완료되었습니다!")
+                    st.session_state.auth_mode = "login"
+                    st.rerun()
+                    
+        if st.button("로그인 화면으로 돌아가기"):
+            st.session_state.auth_mode = "login"
+            st.rerun()
 
 else:
-    # --- [로그인 후 메인 앱 화면] ---
+    # --- [로그인 완료 후 메인 앱 화면] ---
     st.sidebar.title(f"⚡ {st.session_state.nickname}")
     st.sidebar.caption(f"ID: {st.session_state.user_id}")
     if st.sidebar.button("로그아웃"):
@@ -302,16 +244,10 @@ else:
         st.session_state.nickname = None
         st.rerun()
         
-    st.markdown("""
-    <div style="text-align: center; margin-top: 0.5rem; margin-bottom: 1.2rem;">
-        <span style="font-size: 2rem; font-weight: 900; background: linear-gradient(135deg, #00F2FE, #4FACFE); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-            WORKOUT ⚡
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div class='brand-title' style='margin-top:0; font-size:1.8rem;'>WORKOUT ⚡</div>", unsafe_allow_html=True)
     
     tab_workout, tab_timer, tab_feed, tab_calendar, tab_friends, tab_history = st.tabs([
-        "🔥 운동 기록", "⏱️ 타이머", "📱 피드", "📅 소셜 달력", "👥 팔로우", "📊 내 리포트"
+        "기록", "타이머", "피드", "달력", "팔로우", "리포트"
     ])
     
     workouts_df = load_workouts()
@@ -322,7 +258,7 @@ else:
         today_date = st.date_input("운동 날짜", datetime.now())
         
         routine_options = ["선택 안함", "가슴/삼두 DAY", "등/이두 DAY", "하체/복근 DAY", "어깨/유산소 DAY", "자율 운동"]
-        routine_type = st.selectbox("추천 DAY 선택 또는 자율 구성", routine_options)
+        routine_type = st.selectbox("루틴 선택", routine_options)
         
         selected_exercises = []
         if routine_type in ["가슴/삼두 DAY", "등/이두 DAY", "하체/복근 DAY", "어깨/유산소 DAY"]:
@@ -331,18 +267,18 @@ else:
                 st.session_state.current_routine_type = routine_type
                 
             col_rec1, col_rec2 = st.columns([3, 1])
-            with col_rec1: st.info(f"💡 **[{routine_type}]** 오늘의 추천 무작위 조합입니다.")
+            with col_rec1: st.info(f"💡 **[{routine_type}]** 추천 조합")
             with col_rec2:
-                if st.button("🎲 다시 추천"):
+                if st.button("🎲 재추천"):
                     st.session_state.random_routine = generate_dynamic_routine(routine_type)
                     st.rerun()
                     
-            selected_exercises = st.multiselect("수행할 종목 수정 및 추가", options=ALL_EXERCISES, default=st.session_state.random_routine)
+            selected_exercises = st.multiselect("종목 구성", options=ALL_EXERCISES, default=st.session_state.random_routine)
             
         elif routine_type == "자율 운동":
-            selected_exercises = st.multiselect("수행할 종목을 고르세요", options=ALL_EXERCISES)
+            selected_exercises = st.multiselect("종목 선택", options=ALL_EXERCISES)
             
-        custom_ex = st.text_input("커스텀 종목 입력 (쉼표 구분)", placeholder="예: 케이블 로우, 스트레칭")
+        custom_ex = st.text_input("직접 종목 입력 (쉼표 구분)", placeholder="예: 케이블 로우, 스트레칭")
         if custom_ex:
             selected_exercises.extend([x.strip() for x in custom_ex.split(",") if x.strip()])
             
@@ -359,7 +295,7 @@ else:
                     yt_link = get_yt_url(ex)
                     st.markdown(f"""
                     <div class="guide-box">
-                        📌 <b>자세 팁:</b> {tip_text} <a href="{yt_link}" target="_blank" style="color: #38BDF8; margin-left: 8px; font-weight: 700; text-decoration: none;">[▶️ 유튜브 자세 영상]</a>
+                        📌 <b>팁:</b> {tip_text} <a href="{yt_link}" target="_blank" style="color: #38BDF8; margin-left: 8px; font-weight: 600; text-decoration: none;">[▶️ 자세 영상]</a>
                     </div>
                     """, unsafe_allow_html=True)
                     
@@ -395,10 +331,10 @@ else:
                         })
                     st.write("---")
                 
-                memo = st.text_input("오늘의 피드백/메모", placeholder="컨디션 최상, 삼두 자극 잘 옴")
-                is_private = st.checkbox("🔒 나만 보기 (팔로우 피드에 비공개)")
+                memo = st.text_input("오늘의 메모", placeholder="컨디션, 특이사항 등")
+                is_private = st.checkbox("🔒 비공개로 저장")
                 
-                if st.form_submit_button("오늘 운동 저장 완료! 💪"):
+                if st.form_submit_button("저장 완료"):
                     for entry in workout_entries:
                         entry["memo"] = memo
                         entry["is_private"] = "True" if is_private else "False"
@@ -406,11 +342,11 @@ else:
                     new_df = pd.DataFrame(workout_entries)
                     workouts_df = pd.concat([workouts_df, new_df], ignore_index=True)
                     save_data(workouts_df, WORKOUT_FILE)
-                    st.success("운동 기록이 성공적으로 저장되었습니다!")
+                    st.success("성공적으로 저장되었습니다!")
 
     # TAB 2: 세트 간 휴식 타이머
     with tab_timer:
-        st.subheader("⏱️ 세트 간 휴식 카운트다운")
+        st.subheader("⏱️ 휴식 타이머")
         tc1, tc2, tc3, tc4 = st.columns(4)
         set_seconds = 0
         with tc1:
@@ -423,21 +359,21 @@ else:
             if st.button("180초"): set_seconds = 180
             
         custom_sec = st.number_input("직접 초 입력", min_value=0, step=10, value=0)
-        if custom_sec > 0 and st.button("타이머 시작"): set_seconds = custom_sec
+        if custom_sec > 0 and st.button("시작"): set_seconds = custom_sec
             
         if set_seconds > 0:
             timer_placeholder = st.empty()
             progress_bar = st.progress(1.0)
             for remaining in range(set_seconds, -1, -1):
                 mins, secs = divmod(remaining, 60)
-                timer_placeholder.markdown(f"<h1 style='text-align: center; color: #38BDF8; font-size: 4rem; font-weight: 900;'>{mins:02d}:{secs:02d}</h1>", unsafe_allow_html=True)
+                timer_placeholder.markdown(f"<h1 style='text-align: center; color: #38BDF8; font-size: 3.8rem; font-weight: 800;'>{mins:02d}:{secs:02d}</h1>", unsafe_allow_html=True)
                 progress_bar.progress(remaining / set_seconds)
                 time.sleep(1)
-            timer_placeholder.markdown("<h1 style='text-align: center; color: #4ADE80; font-size: 2rem; font-weight: 800;'>🔥 휴식 끝! 다음 세트 시작!</h1>", unsafe_allow_html=True)
+            timer_placeholder.markdown("<h1 style='text-align: center; color: #4ADE80; font-size: 1.8rem; font-weight: 700;'>🔥 휴식 끝! 다음 세트 시작!</h1>", unsafe_allow_html=True)
 
     # TAB 3: 팔로우 피드
     with tab_feed:
-        st.subheader("📱 팔로워 오운완 피드")
+        st.subheader("📱 팔로워 피드")
         follows_df = load_follows()
         my_followings = follows_df[follows_df["follower_id"] == st.session_state.user_id]["following_id"].tolist()
         feed_users = set(my_followings + [st.session_state.user_id])
@@ -451,22 +387,22 @@ else:
             grouped = feed_df.groupby(["date", "nickname", "routine", "user_id"])
             for (date, nick, routine, uid), group in sorted(grouped, key=lambda x: x[0][0], reverse=True):
                 is_me = (uid == st.session_state.user_id)
-                card_title = f"💪 {nick}님의 오운완 ({date})" if not is_me else f"💪 나의 운동 ({date})"
+                card_title = f"💪 {nick} ({date})" if not is_me else f"💪 나 ({date})"
                 with st.expander(f"{card_title} - [{routine}]", expanded=True):
                     total_vol = (group["weight"] * group["reps"] * group["set_num"]).sum()
-                    st.write(f"**총 누적 볼륨:** `{total_vol:,.0f} kg`")
+                    st.write(f"**볼륨:** `{total_vol:,.0f} kg`")
                     ex_summary = group.groupby("exercise").agg({"set_num": "max", "weight": "max"}).reset_index()
                     for _, row in ex_summary.iterrows():
-                        st.write(f"• **{row['exercise']}**: 최고 {row['weight']}kg ({row['set_num']} 세트)")
+                        st.write(f"• **{row['exercise']}**: 최고 {row['weight']}kg ({row['set_num']}세트)")
                     memo_val = group["memo"].iloc[0]
                     if pd.notna(memo_val) and str(memo_val).strip():
-                        st.caption(f"💬 메모: {memo_val}")
+                        st.caption(f"💬 {memo_val}")
         else:
-            st.info("팔로워들의 운동 기록이 아직 없습니다.")
+            st.info("기록이 없습니다.")
 
     # TAB 4: 팔로워 통합 출석 달력
     with tab_calendar:
-        st.subheader("📅 팔로워 출석 현황 달력")
+        st.subheader("📅 출석 달력")
         follows_df = load_follows()
         my_followings = follows_df[follows_df["follower_id"] == st.session_state.user_id]["following_id"].tolist()
         feed_users = set(my_followings + [st.session_state.user_id])
@@ -486,21 +422,20 @@ else:
             month_df = cal_df[(cal_df["year"] == year) & (cal_df["month"] == month)]
             
             if not month_df.empty:
-                st.write(f"### 🗓️ {year}년 {month}월 출석 현황")
                 attendance = month_df.groupby(["date", "nickname"])["routine"].first().unstack(fill_value=None)
                 st.dataframe(attendance.sort_index(ascending=False), use_container_width=True)
             else:
-                st.info(f"{year}년 {month}월에 등록된 운동 출석 기록이 없습니다.")
+                st.info("해당 월의 출석 기록이 없습니다.")
         else:
-            st.info("출석 데이터를 표출할 기록이 없습니다.")
+            st.info("표시할 데이터가 없습니다.")
 
     # TAB 5: 친구 찾기 & 팔로우
     with tab_friends:
-        st.subheader("👥 친구 찾기 및 팔로우")
+        st.subheader("👥 팔로우 관리")
         users_df = load_users()
         follows_df = load_follows()
         
-        search_nick = st.text_input("친구 닉네임 검색", placeholder="닉네임 입력").strip()
+        search_nick = st.text_input("닉네임 검색", placeholder="친구 닉네임").strip()
         if search_nick:
             target_user = users_df[users_df["nickname"] == search_nick]
             if not target_user.empty:
@@ -511,14 +446,14 @@ else:
                 if t_id == st.session_state.user_id:
                     st.warning("자기 자신은 팔로우할 수 없습니다.")
                 else:
-                    st.write(f"**{t_nick}** ({t_bio if pd.notna(t_bio) else '소개글 없음'})")
+                    st.write(f"**{t_nick}** ({t_bio if pd.notna(t_bio) else '소개 없음'})")
                     is_following = not follows_df[
                         (follows_df["follower_id"] == st.session_state.user_id) & 
                         (follows_df["following_id"] == t_id)
                     ].empty
                     
                     if is_following:
-                        if st.button(f"{t_nick}님 언팔로우"):
+                        if st.button("언팔로우"):
                             follows_df = follows_df[~(
                                 (follows_df["follower_id"] == st.session_state.user_id) & 
                                 (follows_df["following_id"] == t_id)
@@ -527,14 +462,14 @@ else:
                             st.success(f"{t_nick}님을 언팔로우했습니다.")
                             st.rerun()
                     else:
-                        if st.button(f"{t_nick}님 팔로우하기"):
+                        if st.button("팔로우하기"):
                             new_follow = pd.DataFrame([{"follower_id": st.session_state.user_id, "following_id": t_id}])
                             follows_df = pd.concat([follows_df, new_follow], ignore_index=True)
                             save_data(follows_df, FOLLOWS_FILE)
                             st.success(f"{t_nick}님을 팔로우합니다!")
                             st.rerun()
             else:
-                st.error("해당 닉네임을 가진 유저를 찾을 수 없습니다.")
+                st.error("유저를 찾을 수 없습니다.")
 
         st.divider()
         st.write("### 내 팔로우 목록")
@@ -544,23 +479,23 @@ else:
             for _, f_row in followed_users.iterrows():
                 st.write(f"• **{f_row['nickname']}** (`{f_row['user_id']}`)")
         else:
-            st.caption("아직 팔로우한 친구가 없습니다.")
+            st.caption("팔로우 중인 친구가 없습니다.")
 
     # TAB 6: 내 리포트 및 성장 분석
     with tab_history:
-        st.subheader("📊 내 개인 운동 리포트")
+        st.subheader("📊 성장 리포트")
         my_df = workouts_df[workouts_df["user_id"] == st.session_state.user_id]
         
         if not my_df.empty:
             my_df["volume"] = my_df["weight"] * my_df["reps"] * my_df["set_num"]
             total_vol = my_df["volume"].sum()
-            st.metric("총 누적 운동 볼륨", f"{total_vol:,.0f} kg")
+            st.metric("총 누적 볼륨", f"{total_vol:,.0f} kg")
             
             vol_by_date = my_df.groupby("date")["volume"].sum().reset_index()
             st.line_chart(vol_by_date.set_index("date"))
             
             st.divider()
-            st.write("### 전체 세부 기록 데이터")
+            st.write("### 데이터 기록")
             st.dataframe(my_df.sort_values(by="date", ascending=False), use_container_width=True)
         else:
-            st.info("아직 등록된 운동 기록이 없습니다.")
+            st.info("기록이 없습니다.")
