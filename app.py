@@ -4,6 +4,7 @@ import os
 import time
 import random
 from datetime import datetime
+import urllib.parse
 
 # 1. 페이지 기본 설정
 st.set_page_config(page_title="운동일지", page_icon="⚡", layout="centered", initial_sidebar_state="collapsed")
@@ -78,24 +79,48 @@ def load_workouts():
 
 def save_data(df, filename): df.to_csv(filename, index=False)
 
-# 3. 헬린이를 위한 운동 가이드 DB (자세 팁 & 가이드 영상)
+# 3. 전체 종목 대상 1줄 팁 맵핑
 EXERCISE_TIPS = {
-    "벤치프레스": {"tip": "견갑(날개뼈)을 고정하고 바벨을 가슴 명치 살짝 위에 밀착시킵니다.", "url": "https://www.youtube.com/results?search_query=벤치프레스+자세"},
-    "인클라인 벤치프레스": {"tip": "벤치 각도를 30도 정도로 맞춰 윗가슴 자극에 집중합니다.", "url": "https://www.youtube.com/results?search_query=인클라인+벤치프레스+자세"},
-    "덤벨 벤치프레스": {"tip": "가슴 근육을 최대한 이완하며 가동범위를 길게 가져갑니다.", "url": "https://www.youtube.com/results?search_query=덤벨+벤치프레스+자세"},
-    "체스트 프레스 머신": {"tip": "의자 높이를 조절해 손잡이가 가슴 중앙에 오도록 합니다.", "url": "https://www.youtube.com/results?search_query=체스트프레스머신+자세"},
-    "펙덱 플라이 머신": {"tip": "팔꿈치를 살짝 구부린 상태를 유지하고 가슴을 모아줍니다.", "url": "https://www.youtube.com/results?search_query=펙덱플라이+자세"},
-    "데드리프트": {"tip": "허리가 굽지 않도록 척추 중립을 지키고 바벨을 몸에 붙여 올립니다.", "url": "https://www.youtube.com/results?search_query=컨벤셔널+데드리프트+자세"},
-    "바벨로우": {"tip": "상체를 45도 숙이고 바벨을 배꼽 방향으로 당겨 등 하부를 자극합니다.", "url": "https://www.youtube.com/results?search_query=바벨로우+자세"},
-    "렛풀다운": {"tip": "가슴을 열어주고 바를 쇄골 방향으로 당겨 등에 자극을 줍니다.", "url": "https://www.youtube.com/results?search_query=렛풀다운+자세"},
-    "시티드 케이블 로우": {"tip": "상체가 뒤로 과도하게 젖혀지지 않도록 등 힘으로 당깁니다.", "url": "https://www.youtube.com/results?search_query=시티드케이블로우+자세"},
-    "스쿼트": {"tip": "무릎이 고관절과 함께 접히며 복압을 유지하고 수평 밑으로 내려갑니다.", "url": "https://www.youtube.com/results?search_query=스쿼트+자세"},
-    "레그프레스": {"tip": "발판 위 발 위치에 따라 자극 부위가 달라집니다. 무릎을 완전히 펴지 마세요.", "url": "https://www.youtube.com/results?search_query=레그프레스+자세"},
-    "오버헤드 프레스": {"tip": "복근과 엉덩이에 힘을 주고 바벨을 머리 위 직선으로 밀어 올립니다.", "url": "https://www.youtube.com/results?search_query=오버헤드프레스+자세"},
-    "사이드 레터럴 레이즈": {"tip": "손목이 아닌 팔꿈치를 들어 올린다는 느낌으로 측면 어깨를 사용합니다.", "url": "https://www.youtube.com/results?search_query=사이드레터럴레이즈+자세"},
-    "트라이셉스 케이블 푸쉬다운": {"tip": "팔꿈치를 옆구리에 고정하고 아래로 밀어 삼두를 삼각 압축합니다.", "url": "https://www.youtube.com/results?search_query=케이블푸쉬다운+자세"},
-    "바벨 컬": {"tip": "상체 반동을 줄이고 팔꿈치를 고정한 채 이두의 힘으로 끌어올립니다.", "url": "https://www.youtube.com/results?search_query=바벨컬+자세"}
+    "벤치프레스": "견갑(날개뼈)을 고정하고 바벨을 가슴 명치 살짝 위에 밀착시킵니다.",
+    "인클라인 벤치프레스": "벤치 각도를 30도 정도로 맞춰 윗가슴 자극에 집중합니다.",
+    "덤벨 벤치프레스": "가슴 근육을 최대한 이완하며 가동범위를 길게 가져갑니다.",
+    "인클라인 덤벨 벤치프레스": "상부 가슴에 이완 자극을 수직으로 전달합니다.",
+    "체스트 프레스 머신": "의자 높이를 조절해 손잡이가 가슴 중앙에 오도록 합니다.",
+    "펙덱 플라이 머신": "팔꿈치를 살짝 구부린 상태를 유지하고 가슴을 모아줍니다.",
+    "딥스": "상체를 앞으로 살짝 숙여 가슴 하부 및 삼두 자극을 극대화합니다.",
+    "딥스(삼두)": "상체를 세우고 팔꿈치를 수직으로 접어 삼두근에 자극을 집중합니다.",
+    "푸쉬업": "코어를 고정하고 가슴 전체가 바닥에 수평으로 내려가도록 합니다.",
+    "데드리프트": "허리가 굽지 않도록 척추 중립을 지키고 바벨을 몸에 붙여 올립니다.",
+    "바벨로우": "상체를 45도 숙이고 바벨을 배꼽 방향으로 당겨 등 하부를 자극합니다.",
+    "렛풀다운": "가슴을 열어주고 바를 쇄골 방향으로 당겨 등에 자극을 줍니다.",
+    "시티드 케이블 로우": "상체가 뒤로 과도하게 젖혀지지 않도록 등 힘으로 당깁니다.",
+    "원암 덤벨로우": "등 한쪽씩 집중하여 수직 방향으로 팔꿈치를 크게 올립니다.",
+    "풀업": "어깨를 내리고(하강) 가슴을 바 쪽으로 끌어올립니다.",
+    "어시스트 풀업 머신": "체중 부담을 줄여 등의 자극점을 정확히 잡습니다.",
+    "티바로우": "중앙 등 근육의 수축감을 느끼며 당깁니다.",
+    "암 풀다운": "팔을 약간 구부린 채 케이블을 허벅지 쪽으로 당겨 광배근을 자극합니다.",
+    "스쿼트": "무릎이 고관절과 함께 접히며 복압을 유지하고 내려갑니다.",
+    "레그프레스": "무릎을 완전히 펴지 말고 관절 부담을 줄입니다.",
+    "레그 익스텐션": "허벅지 전면(대두사두근) 수축에 집중합니다.",
+    "레그 컬": "엉덩이가 뜨지 않게 패드에 밀착시키고 햄스트링으로 접습니다.",
+    "런지": "무릎이 발끝을 과도하게 넘지 않도록 수직으로 내려갑니다.",
+    "오버헤드 프레스": "복근과 엉덩이에 힘을 주고 바벨을 머리 위 직선으로 밀어 올립니다.",
+    "덤벨 숄더프레스": "덤벨이 서로 부딪히지 않도록 어깨 수직상방으로 밉니다.",
+    "사이드 레터럴 레이즈": "손목이 아닌 팔꿈치를 들어 올려 측면 어깨를 사용합니다.",
+    "벤트오버 레터럴 레이즈": "상체를 숙이고 후면 어깨 자극에 집중합니다.",
+    "페이스풀": "케이블을 눈높이 방향으로 당겨 후면 어깨와 승모근 하부를 자극합니다.",
+    "트라이셉스 케이블 푸쉬다운": "팔꿈치를 옆구리에 고정하고 아래로 밀어 삼두를 삼각 압축합니다.",
+    "라잉 트라이셉스 익스텐션": "팔꿈치를 고정하고 이마 수직 방향으로 바를 내렸다 밀어 올립니다.",
+    "바벨 컬": "상체 반동을 줄이고 팔꿈치를 고정한 채 이두의 힘으로 끌어올립니다.",
+    "덤벨 컬": "손목을 안쪽으로 회전시키며 이두의 최대 수축을 만듭니다.",
+    "해머 컬": "손바닥이 마주 보게 덤벨을 잡아 이두 외측과 전완근을 자극합니다."
 }
+
+# 자동 유튜브 자세 검색 URL 생성 함수
+def get_yt_url(exercise_name):
+    query = f"{exercise_name} 자세"
+    encoded_query = urllib.parse.quote(query)
+    return f"https://www.youtube.com/results?search_query={encoded_query}"
 
 EXERCISE_POOL = {
     "가슴_메인": ["벤치프레스", "인클라인 벤치프레스", "덤벨 벤치프레스", "인클라인 덤벨 벤치프레스"],
@@ -192,7 +217,7 @@ else:
     
     workouts_df = load_workouts()
     
-    # TAB 1: 운동 기록 작성 (헬린이 자세 가이드 통합)
+    # TAB 1: 운동 기록 작성 (전 종목 유튜브 가이드 보장)
     with tab_workout:
         st.subheader("오늘의 운동")
         today_date = st.date_input("운동 날짜", datetime.now())
@@ -231,14 +256,15 @@ else:
                 for ex in selected_exercises:
                     st.write(f"🏋️ **{ex}**")
                     
-                    # 헬린이를 위한 1줄 핵심 가이드 & 유튜브 팁 가이드
-                    if ex in EXERCISE_TIPS:
-                        tip_info = EXERCISE_TIPS[ex]
-                        st.markdown(f"""
-                        <div class="guide-box">
-                            📌 <b>자세 팁:</b> {tip_info['tip']} <a href="{tip_info['url']}" target="_blank" style="color: #38BDF8; margin-left: 8px; font-weight: 700; text-decoration: none;">[▶️ 자세 영상 가이드]</a>
-                        </div>
-                        """, unsafe_allow_html=True)
+                    # 팁 문구가 있으면 표시하고, 링크는 모든 종목 자동 생성 연동
+                    tip_text = EXERCISE_TIPS.get(ex, "자극 부위에 집중하여 바른 자세로 수행합니다.")
+                    yt_link = get_yt_url(ex)
+                    
+                    st.markdown(f"""
+                    <div class="guide-box">
+                        📌 <b>자세 팁:</b> {tip_text} <a href="{yt_link}" target="_blank" style="color: #38BDF8; margin-left: 8px; font-weight: 700; text-decoration: none;">[▶️ 자세 영상 가이드]</a>
+                    </div>
+                    """, unsafe_allow_html=True)
                     
                     # 지난 기록 자동 안내
                     ex_past = my_past_workouts[my_past_workouts["exercise"] == ex]
