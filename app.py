@@ -18,14 +18,13 @@ PROFILE_DIR = "profile_pics"
 if not os.path.exists(PROFILE_DIR):
     os.makedirs(PROFILE_DIR)
 
-# 스마트폰 홈 화면 전용 아이콘 URL (원하는 고화질 이미지 링크로 변경 가능)
 APP_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
 
-# PWA / 홈 화면 앱 아이콘 메타 태그 & Responsive UI CSS
+# 모바일 대응 커스텀 CSS (타이머 가로 정렬 & 세트별 입력 레이아웃)
 st.markdown(f"""
 <head>
     <link rel="apple-touch-icon" href="{APP_ICON_URL}">
-    <link rel="icon" sizes="192x192" href="{APP_ICON_URL}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{APP_ICON_URL}">
 </head>
 <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
@@ -37,19 +36,19 @@ st.markdown(f"""
     }}
 
     .brand-title {{
-        font-size: 2.2rem;
+        font-size: 2rem;
         font-weight: 800;
         letter-spacing: -0.05em;
         color: #F8FAFC;
         text-align: center;
-        margin-top: 1rem;
+        margin-top: 0.8rem;
         margin-bottom: 0.2rem;
     }}
     .brand-sub {{
         font-size: 0.85rem;
         color: #64748B;
         text-align: center;
-        margin-bottom: 2rem;
+        margin-bottom: 1.8rem;
     }}
 
     /* 탭 메뉴 균등 분할 레이아웃 */
@@ -61,7 +60,7 @@ st.markdown(f"""
         padding: 4px !important;
         gap: 2px !important;
         border: 1px solid #222634 !important;
-        margin-bottom: 1.5rem !important;
+        margin-bottom: 1.2rem !important;
     }}
 
     button[data-baseweb="tab"] {{
@@ -71,7 +70,7 @@ st.markdown(f"""
         justify-content: center !important;
         border-radius: 8px !important;
         padding: 10px 0px !important;
-        font-size: 0.85rem !important;
+        font-size: 0.82rem !important;
         font-weight: 700 !important;
         color: #64748B !important;
         border: none !important;
@@ -90,7 +89,7 @@ st.markdown(f"""
         background: #14161D !important;
         border: 1px solid #222634 !important;
         border-radius: 16px !important;
-        padding: 22px !important;
+        padding: 18px !important;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
     }}
 
@@ -100,9 +99,9 @@ st.markdown(f"""
         color: #FFFFFF !important;
         border: none !important;
         border-radius: 10px !important;
-        padding: 12px 20px !important;
+        padding: 12px 16px !important;
         font-weight: 700 !important;
-        font-size: 0.98rem !important;
+        font-size: 0.95rem !important;
         transition: all 0.2s ease !important;
     }}
     .stButton > button:hover {{ background: #1D4ED8 !important; }}
@@ -122,10 +121,18 @@ st.markdown(f"""
         border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.83rem; color: #FBBF24;
     }}
 
+    /* 세트별 입력 레이아웃 가공 */
+    .set-row-title {{
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #38BDF8;
+        margin-top: 6px;
+    }}
+
     @media (max-width: 640px) {{
-        .block-container {{ padding-left: 0.6rem !important; padding-right: 0.6rem !important; padding-top: 0.8rem !important; }}
-        .brand-title {{ font-size: 1.7rem; }}
-        button[data-baseweb="tab"] {{ font-size: 0.75rem !important; padding: 8px 0px !important; }}
+        .block-container {{ padding-left: 0.5rem !important; padding-right: 0.5rem !important; padding-top: 0.6rem !important; }}
+        .brand-title {{ font-size: 1.6rem; }}
+        button[data-baseweb="tab"] {{ font-size: 0.72rem !important; padding: 8px 0px !important; }}
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -302,7 +309,7 @@ else:
     col_h1, col_h2 = st.columns([1, 4])
     with col_h1:
         if prof_path:
-            st.image(prof_path, width=55)
+            st.image(prof_path, width=50)
         else:
             st.write("👤")
     with col_h2:
@@ -322,7 +329,7 @@ else:
     
     workouts_df = load_workouts()
     
-    # TAB 1: 운동 기록 작성
+    # TAB 1: 세트별 개별 무게/횟수 입력 (점진적 과부하 시스템)
     with tab_workout:
         st.subheader("오늘의 운동")
         today_date = st.date_input("운동 날짜", datetime.now())
@@ -376,19 +383,23 @@ else:
                         last_date = ex_past["date"].max()
                         st.markdown(f"""
                         <div class="prev-record-card">
-                            <span class="prev-record-title">💡 지난 최다 기록 ({last_date})</span>
+                            <span class="prev-record-title">💡 지난 최고 기록 ({last_date})</span>
                             <span class="prev-record-value">{max_w} kg × {max_r} 회</span>
                         </div>
                         """, unsafe_allow_html=True)
                     else:
                         st.caption("💡 첫 수행 종목입니다.")
                     
-                    c1, c2, c3 = st.columns(3)
-                    with c1: num_sets = st.number_input(f"세트 ({ex})", 1, 10, 3, key=f"s_{ex}")
-                    with c2: weight = st.number_input(f"무게kg ({ex})", 0.0, step=2.5, value=20.0, key=f"w_{ex}")
-                    with c3: reps = st.number_input(f"횟수 ({ex})", 1, value=10, key=f"r_{ex}")
+                    num_sets = st.number_input(f"총 세트 수 ({ex})", 1, 10, 3, key=f"setcnt_{ex}")
                     
+                    # 각 세트별 개별 무게/횟수 독립 입력창 생성 (점진적 과부하 반영)
                     for s in range(1, num_sets + 1):
+                        sc1, sc2 = st.columns(2)
+                        with sc1:
+                            w = st.number_input(f"{s}세트 무게(kg)", 0.0, step=2.5, value=20.0, key=f"w_{ex}_{s}")
+                        with sc2:
+                            r = st.number_input(f"{s}세트 횟수(reps)", 1, value=10, key=f"r_{ex}_{s}")
+                            
                         workout_entries.append({
                             "date": str(today_date),
                             "user_id": st.session_state.user_id,
@@ -396,8 +407,8 @@ else:
                             "routine": routine_type,
                             "exercise": ex,
                             "set_num": s,
-                            "weight": weight,
-                            "reps": reps
+                            "weight": w,
+                            "reps": r
                         })
                     st.write("---")
                 
@@ -414,20 +425,21 @@ else:
                     save_data(workouts_df, WORKOUT_FILE)
                     st.success("성공적으로 저장되었습니다!")
 
-    # TAB 2: 세트 간 휴식 타이머
+    # TAB 2: 휴식 타이머 (모바일 가로 1줄 정렬 보장)
     with tab_timer:
         st.subheader("⏱️ 휴식 타이머")
-        tc1, tc2, tc3, tc4 = st.columns(4)
         
+        # 모바일 화면에서도 가로 정렬을 강제하기 위한 4열 컬럼
+        t_cols = st.columns(4)
         target_sec = 0
-        with tc1:
-            if st.button("60초"): target_sec = 60
-        with tc2:
-            if st.button("90초"): target_sec = 90
-        with tc3:
-            if st.button("120초"): target_sec = 120
-        with tc4:
-            if st.button("180초"): target_sec = 180
+        with t_cols[0]:
+            if st.button("60초", key="btn_60"): target_sec = 60
+        with t_cols[1]:
+            if st.button("90초", key="btn_90"): target_sec = 90
+        with t_cols[2]:
+            if st.button("120초", key="btn_120"): target_sec = 120
+        with t_cols[3]:
+            if st.button("180초", key="btn_180"): target_sec = 180
             
         custom_sec = st.number_input("직접 초 입력", min_value=0, step=10, value=0)
         if custom_sec > 0 and st.button("타이머 시작"): target_sec = custom_sec
@@ -437,9 +449,7 @@ else:
             timer_box = st.empty()
             p_bar = st.progress(1.0)
             
-            stop_col1, stop_col2 = st.columns([3, 1])
-            with stop_col2:
-                stop_btn = st.button("⏹️ 중단")
+            stop_btn = st.button("⏹️ 타이머 중단")
                 
             for remaining in range(target_sec, -1, -1):
                 if stop_btn or not st.session_state.timer_running:
@@ -479,11 +489,16 @@ else:
                     if f_pic:
                         st.image(f_pic, width=40)
                         
-                    total_vol = (group["weight"] * group["reps"] * group["set_num"]).sum()
-                    st.write(f"**볼륨:** `{total_vol:,.0f} kg`")
-                    ex_summary = group.groupby("exercise").agg({"set_num": "max", "weight": "max"}).reset_index()
-                    for _, row in ex_summary.iterrows():
-                        st.write(f"• **{row['exercise']}**: 최고 {row['weight']}kg ({row['set_num']}세트)")
+                    total_vol = (group["weight"] * group["reps"]).sum()
+                    st.write(f"**총 볼륨:** `{total_vol:,.0f} kg`")
+                    
+                    # 세트별 상세 기록 표출
+                    ex_list = group["exercise"].unique()
+                    for ex in ex_list:
+                        ex_sub = group[group["exercise"] == ex]
+                        sets_str = ", ".join([f"{r['weight']}kg×{r['reps']}회" for _, r in ex_sub.iterrows()])
+                        st.write(f"• **{ex}**: {sets_str}")
+                        
                     memo_val = group["memo"].iloc[0]
                     if pd.notna(memo_val) and str(memo_val).strip():
                         st.caption(f"💬 {memo_val}")
@@ -614,7 +629,7 @@ else:
         st.subheader("📊 내 성장 리포트")
         my_df = workouts_df[workouts_df["user_id"] == st.session_state.user_id]
         if not my_df.empty:
-            my_df["volume"] = my_df["weight"] * my_df["reps"] * my_df["set_num"]
+            my_df["volume"] = my_df["weight"] * my_df["reps"]
             total_vol = my_df["volume"].sum()
             st.metric("총 누적 볼륨", f"{total_vol:,.0f} kg")
             
