@@ -35,7 +35,7 @@ st.markdown("""
     .prev-record-value { font-size: 0.95rem; color: #F8FAFC; font-weight: 800; }
     .guide-box {
         background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3);
-        border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.85rem; color: #FBBF24;
+        border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; font-size: 0.85rem; color: #FBBF24;
     }
     div[data-testid="stForm"], div.stExpander {
         background: #11131F !important; border: 1px solid #1E293B !important;
@@ -79,16 +79,7 @@ def load_workouts():
 
 def save_data(df, filename): df.to_csv(filename, index=False)
 
-# 3. 주요 운동 GIF 애니메이션 URL DB
-EXERCISE_GIFS = {
-    "벤치프레스": "https://media.giphy.com/media/xT1R3st8J33yR73q1O/giphy.gif",
-    "스쿼트": "https://media.giphy.com/media/3o7TKT7658xLxFzB6M/giphy.gif",
-    "데드리프트": "https://media.giphy.com/media/l41YqLnoqD5G8SkgM/giphy.gif",
-    "오버헤드 프레스": "https://media.giphy.com/media/3o7TKT0W9eZ47X0qOQ/giphy.gif",
-    "렛풀다운": "https://media.giphy.com/media/3o7TKP9A2aAn3R5fQA/giphy.gif"
-}
-
-# 4. 전체 종목 대상 1줄 팁 맵핑
+# 3. 전체 종목 대상 1줄 자세 팁
 EXERCISE_TIPS = {
     "벤치프레스": "견갑(날개뼈)을 고정하고 바벨을 가슴 명치 살짝 위에 밀착시킵니다.",
     "인클라인 벤치프레스": "벤치 각도를 30도 정도로 맞춰 윗가슴 자극에 집중합니다.",
@@ -105,6 +96,7 @@ EXERCISE_TIPS = {
     "오버헤드 프레스": "복근과 엉덩이에 힘을 주고 바벨을 머리 위 직선으로 밀어 올립니다.",
     "사이드 레터럴 레이즈": "손목이 아닌 팔꿈치를 들어 올려 측면 어깨를 사용합니다.",
     "트라이셉스 케이블 푸쉬다운": "팔꿈치를 옆구리에 고정하고 아래로 밀어 삼두를 삼각 압축합니다.",
+    "라잉 트라이셉스 익스텐션": "팔꿈치를 고정하고 이마 수직 방향으로 바를 내렸다 밀어 올립니다.",
     "바벨 컬": "상체 반동을 줄이고 팔꿈치를 고정한 채 이두의 힘으로 끌어올립니다."
 }
 
@@ -208,7 +200,7 @@ else:
     
     workouts_df = load_workouts()
     
-    # TAB 1: 운동 기록 작성 (GIF + 유튜브 가이드 동시 표출)
+    # TAB 1: 운동 기록 작성
     with tab_workout:
         st.subheader("오늘의 운동")
         today_date = st.date_input("운동 날짜", datetime.now())
@@ -247,21 +239,16 @@ else:
                 for ex in selected_exercises:
                     st.write(f"🏋️ **{ex}**")
                     
-                    # 1. GIF 모션 짤방이 있으면 접기/펴기 메뉴로 바로 보여줌
-                    if ex in EXERCISE_GIFS:
-                        with st.expander(f"🎬 {ex} 실시간 동작 GIF 가이드 보기", expanded=False):
-                            st.image(EXERCISE_GIFS[ex], caption=f"{ex} 동작 애니메이션", use_container_width=True)
-                    
-                    # 2. 자세 팁 + 유튜브 영상 링크 가이드 상자
+                    # 자세 팁 + 유튜브 영상 링크 가이드 상자 (에러 없이 100% 작동)
                     tip_text = EXERCISE_TIPS.get(ex, "자극 부위에 집중하여 바른 자세로 수행합니다.")
                     yt_link = get_yt_url(ex)
                     st.markdown(f"""
                     <div class="guide-box">
-                        📌 <b>자세 팁:</b> {tip_text} <a href="{yt_link}" target="_blank" style="color: #38BDF8; margin-left: 8px; font-weight: 700; text-decoration: none;">[▶️ 유튜브 영상 가이드]</a>
+                        📌 <b>자세 팁:</b> {tip_text} <a href="{yt_link}" target="_blank" style="color: #38BDF8; margin-left: 8px; font-weight: 700; text-decoration: none;">[▶️ 유튜브 자세 영상]</a>
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # 3. 지난 기록 자동 안내
+                    # 지난 기록 자동 안내
                     ex_past = my_past_workouts[my_past_workouts["exercise"] == ex]
                     if not ex_past.empty:
                         max_w = ex_past["weight"].max()
