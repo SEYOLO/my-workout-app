@@ -20,7 +20,7 @@ if not os.path.exists(PROFILE_DIR):
 
 APP_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
 
-# 라디오 버튼 기반 100% 균등 분할 커스텀 CSS
+# 모바일 & PC 반응형 깔끔한 버튼 커스텀 CSS
 st.markdown(f"""
 <head>
     <link rel="apple-touch-icon" href="{APP_ICON_URL}">
@@ -51,67 +51,23 @@ st.markdown(f"""
         margin-bottom: 1.5rem;
     }}
 
-    /* Radio 버튼을 가로 100% 균등 세그먼트 메뉴로 커스텀 */
-    div[data-testid="stRadio"] > div {{
-        display: flex !important;
-        flex-direction: row !important;
-        width: 100% !important;
-        background-color: #14161D !important;
-        border-radius: 12px !important;
-        padding: 4px !important;
-        gap: 4px !important;
-        border: 1px solid #222634 !important;
-        margin-bottom: 1.5rem !important;
-    }}
-
-    div[data-testid="stRadio"] label {{
-        flex: 1 1 0% !important;
-        width: 100% !important;
-        text-align: center !important;
-        justify-content: center !important;
-        background: transparent !important;
-        border-radius: 8px !important;
-        padding: 10px 0px !important;
-        margin: 0 !important;
-        cursor: pointer !important;
-        transition: all 0.2s ease-in-out !important;
-        border: none !important;
-    }}
-
-    /* 라디오 원형 버튼 제거 및 텍스트만 중앙 정렬 */
-    div[data-testid="stRadio"] label > div:first-child {{
-        display: none !important;
-    }}
-
-    div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {{
-        font-size: 0.85rem !important;
-        font-weight: 700 !important;
-        color: #64748B !important;
-        margin: 0 !important;
-    }}
-
-    /* 선택된 탭 스타일링 */
-    div[data-testid="stRadio"] label[data-checked="true"] {{
-        background: #1E293B !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
-    }}
-
-    div[data-testid="stRadio"] label[data-checked="true"] div[data-testid="stMarkdownContainer"] p {{
-        color: #38BDF8 !important;
-    }}
-
+    /* 메뉴 버튼 6분할 스타일 */
     .stButton > button {{
         width: 100% !important;
-        background: #2563EB !important;
-        color: #FFFFFF !important;
-        border: none !important;
+        background: #14161D !important;
+        color: #94A3B8 !important;
+        border: 1px solid #222634 !important;
         border-radius: 10px !important;
-        padding: 12px 16px !important;
+        padding: 10px 0px !important;
         font-weight: 700 !important;
-        font-size: 0.95rem !important;
+        font-size: 0.85rem !important;
         transition: all 0.2s ease !important;
     }}
-    .stButton > button:hover {{ background: #1D4ED8 !important; }}
+    
+    .stButton > button:hover {{
+        border-color: #38BDF8 !important;
+        color: #38BDF8 !important;
+    }}
 
     .prev-record-card {{
         background: rgba(56, 189, 248, 0.05);
@@ -129,9 +85,9 @@ st.markdown(f"""
     }}
 
     @media (max-width: 640px) {{
-        .block-container {{ padding-left: 0.5rem !important; padding-right: 0.5rem !important; padding-top: 0.6rem !important; }}
+        .block-container {{ padding-left: 0.4rem !important; padding-right: 0.4rem !important; padding-top: 0.6rem !important; }}
         .brand-title {{ font-size: 1.6rem; }}
-        div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {{ font-size: 0.75rem !important; }}
+        .stButton > button {{ font-size: 0.75rem !important; padding: 8px 0px !important; }}
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -259,6 +215,7 @@ def generate_dynamic_routine(routine_type):
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "nickname" not in st.session_state: st.session_state.nickname = None
 if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
+if "active_tab" not in st.session_state: st.session_state.active_tab = "기록"
 if "timer_running" not in st.session_state: st.session_state.timer_running = False
 
 # --- [로그인 / 회원가입 랜딩] ---
@@ -352,18 +309,22 @@ else:
         
     st.markdown("<div class='brand-title' style='margin-top:0; font-size:1.6rem;'>WORKOUT ⚡</div>", unsafe_allow_html=True)
     
-    # 100% 가로 분할 보장 세그먼트 컨트롤 메뉴
-    selected_tab = st.radio(
-        "", 
-        ["기록", "타이머", "피드", "달력", "팔로우", "프로필"], 
-        index=0, 
-        label_visibility="collapsed"
-    )
+    # 100% 가로 분할 독립 버튼 상단 네비게이션
+    nav_cols = st.columns(6)
+    tabs_list = ["기록", "타이머", "피드", "달력", "팔로우", "프로필"]
     
+    for idx, t_name in enumerate(tabs_list):
+        with nav_cols[idx]:
+            is_active = (st.session_state.active_tab == t_name)
+            btn_label = f"• {t_name}" if is_active else t_name
+            if st.button(btn_label, key=f"nav_btn_{t_name}"):
+                st.session_state.active_tab = t_name
+                st.rerun()
+
     workouts_df = load_workouts()
     
     # TAB 1: 운동 기록 작성
-    if selected_tab == "기록":
+    if st.session_state.active_tab == "기록":
         st.subheader("오늘의 운동")
         today_date = st.date_input("운동 날짜", datetime.now())
         
@@ -457,7 +418,7 @@ else:
                 st.success("성공적으로 저장되었습니다!")
 
     # TAB 2: 휴식 타이머
-    elif selected_tab == "타이머":
+    elif st.session_state.active_tab == "타이머":
         st.subheader("⏱️ 휴식 타이머")
         
         t_cols = st.columns(4)
@@ -497,7 +458,7 @@ else:
                 st.session_state.timer_running = False
 
     # TAB 3: 팔로우 피드
-    elif selected_tab == "피드":
+    elif st.session_state.active_tab == "피드":
         st.subheader("📱 팔로워 피드")
         follows_df = load_follows()
         my_followings = follows_df[follows_df["follower_id"] == st.session_state.user_id]["following_id"].tolist()
@@ -542,7 +503,7 @@ else:
             st.info("기록이 없습니다.")
 
     # TAB 4: 팔로워 출석 달력
-    elif selected_tab == "달력":
+    elif st.session_state.active_tab == "달력":
         st.subheader("📅 출석 달력")
         follows_df = load_follows()
         my_followings = follows_df[follows_df["follower_id"] == st.session_state.user_id]["following_id"].tolist()
@@ -571,7 +532,7 @@ else:
             st.info("표시할 데이터가 없습니다.")
 
     # TAB 5: 친구 찾기 & 팔로우
-    elif selected_tab == "팔로우":
+    elif st.session_state.active_tab == "팔로우":
         st.subheader("👥 팔로우 관리")
         users_df = load_users()
         follows_df = load_follows()
@@ -623,7 +584,7 @@ else:
             st.caption("팔로우 중인 친구가 없습니다.")
 
     # TAB 6: 프로필 관리 & 리포트
-    elif selected_tab == "프로필":
+    elif st.session_state.active_tab == "프로필":
         st.subheader("⚙️ 프로필 관리 & 리포트")
         users_df = load_users()
         user_idx = users_df[users_df["user_id"] == st.session_state.user_id].index
