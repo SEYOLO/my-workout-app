@@ -20,7 +20,7 @@ if not os.path.exists(PROFILE_DIR):
 
 APP_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
 
-# 모바일 대응, 타이머 가로정렬 강제, 폰트 사이즈 최적화 CSS
+# 모바일 대응, 프로필 원형 아바타 및 UI CSS
 st.markdown(f"""
 <head>
     <link rel="apple-touch-icon" href="{APP_ICON_URL}">
@@ -99,7 +99,23 @@ st.markdown(f"""
         margin-bottom: 1.2rem;
     }}
 
-    /* 모바일 헤더 폰트 크기 대폭 축소 */
+    /* 프로필 원형 아바타 전용 CSS (비율 유지 커버) */
+    .profile-avatar {{
+        width: 65px;
+        height: 65px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #38BDF8;
+        box-shadow: 0 4px 10px rgba(56, 189, 248, 0.2);
+    }}
+    .profile-avatar-small {{
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1.5px solid #38BDF8;
+    }}
+
     h1 {{ font-size: 1.6rem !important; }}
     h2 {{ font-size: 1.3rem !important; margin-top: 0.8rem !important; margin-bottom: 0.5rem !important; }}
     h3 {{ font-size: 1.05rem !important; margin-top: 0.6rem !important; margin-bottom: 0.4rem !important; }}
@@ -117,7 +133,6 @@ st.markdown(f"""
     }}
     .stButton > button:hover {{ background: #1D4ED8 !important; }}
 
-    /* 모바일 타이머 가로 4분할 강제 정렬 스타일 */
     div[data-testid="stHorizontalBlock"] {{
         display: flex !important;
         flex-direction: row !important;
@@ -254,7 +269,7 @@ EXERCISE_TIPS = {
     "프리처 컬": "패드에 삼두를 완전히 밀착시켜 반동을 차단하고 이두의 이완을 최대로 끌어냅니다.",
 
     # 복근 / 유산소
-    "크런치": "허리를 바닥에 붙인 채 상복부만 말아 올려 갈비뼈와 골반이 가까워지게 만듭니다.",
+    "크런치": "허리를 바닥에 붙인 채 상복부만 말아 올려 갈비뼈와 갈골반이 가까워지게 만듭니다.",
     "레그 레이즈": "요추(허리)가 바닥에서 뜨지 않도록 복압을 유지하며 하복부 힘으로 다리를 들어 올립니다.",
     "플랭크": "어깨 아래 팔꿈치를 두고 머리부터 발끝까지 일직선을 만들어 코어 전체에 장력을 줍니다.",
     "천국의 계단(스텝밀)": "발바닥 전체로 계단을 딛고 발 뒤꿈치를 밀어내며 둔근 자극을 살립니다.",
@@ -354,6 +369,12 @@ if "nickname" not in st.session_state: st.session_state.nickname = None
 if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
 if "timer_running" not in st.session_state: st.session_state.timer_running = False
 
+# 프로필 모달(팝업) 확대를 위한 헬퍼 함수
+@st.dialog("프로필 사진 원본")
+def show_profile_dialog(img_path, nick):
+    st.image(img_path, use_column_width=True)
+    st.caption(f"👤 {nick} 님의 프로필 원본")
+
 # --- [로그인 / 회원가입 랜딩] ---
 if st.session_state.user_id is None:
     st.markdown("<div class='brand-title'>WORKOUT</div>", unsafe_allow_html=True)
@@ -425,25 +446,32 @@ if st.session_state.user_id is None:
             st.rerun()
 
 else:
-    # --- [로그인 완료 메인 화면] ---
+    # --- [로그인 완료 메인 화면 헤더] ---
     prof_path = get_profile_path(st.session_state.user_id)
     
-    col_h1, col_h2 = st.columns([1, 4])
+    col_h1, col_h2 = st.columns([1.2, 3.8])
     with col_h1:
         if prof_path:
-            st.image(prof_path, width=45)
+            # 비율 유지 원형 아바타 출력
+            with open(prof_path, "rb") as f:
+                bytes_data = f.read()
+                import base64
+                encoded = base64.b64encode(bytes_data).decode()
+                st.markdown(f'<img src="data:image/png;base64,{encoded}" class="profile-avatar">', unsafe_allow_html=True)
+            if st.button("🔍 확대", key="btn_view_my_pic"):
+                show_profile_dialog(prof_path, st.session_state.nickname)
         else:
             st.write("👤")
+            
     with col_h2:
         st.markdown(f"**{st.session_state.nickname}**")
         st.caption(f"ID: {st.session_state.user_id}")
+        if st.button("로그아웃", key="btn_logout"):
+            st.session_state.user_id = None
+            st.session_state.nickname = None
+            st.rerun()
         
-    if st.sidebar.button("로그아웃"):
-        st.session_state.user_id = None
-        st.session_state.nickname = None
-        st.rerun()
-        
-    st.markdown("<div class='brand-title' style='margin-top:0;'>WORKOUT ⚡</div>", unsafe_allow_html=True)
+    st.markdown("<div class='brand-title' style='margin-top:0.4rem;'>WORKOUT ⚡</div>", unsafe_allow_html=True)
     
     tab_workout, tab_timer, tab_feed, tab_calendar, tab_friends, tab_profile = st.tabs([
         "기록", "타이머", "피드", "달력", "팔로우", "프로필"
@@ -570,7 +598,7 @@ else:
                 save_data(workouts_df, WORKOUT_FILE)
                 st.success("성공적으로 저장되었습니다!")
 
-    # TAB 2: 휴식 타이머 (강제 가로 4분할 반영)
+    # TAB 2: 휴식 타이머
     with tab_timer:
         st.markdown("### ⏱️ 휴식 타이머")
         
@@ -610,7 +638,7 @@ else:
                 timer_box.markdown("<h2 style='text-align: center; color: #4ADE80;'>🔥 휴식 끝! 다음 세트 시작!</h2>", unsafe_allow_html=True)
                 st.session_state.timer_running = False
 
-    # TAB 3: 팔로우 피드
+    # TAB 3: 팔로우 피드 (프로필 사진 클릭 시 팝업 구현)
     with tab_feed:
         st.markdown("### 📱 팔로워 피드")
         
@@ -635,7 +663,17 @@ else:
                 with st.expander(f"{card_title} - [{routine}]", expanded=True):
                     f_pic = get_profile_path(uid)
                     if f_pic:
-                        st.image(f_pic, width=40)
+                        col_pic, col_nick = st.columns([1, 4])
+                        with col_pic:
+                            with open(f_pic, "rb") as f:
+                                bytes_data = f.read()
+                                import base64
+                                encoded = base64.b64encode(bytes_data).decode()
+                                st.markdown(f'<img src="data:image/png;base64,{encoded}" class="profile-avatar-small">', unsafe_allow_html=True)
+                            if st.button("🔍", key=f"feed_pic_{uid}_{date}"):
+                                show_profile_dialog(f_pic, nick)
+                        with col_nick:
+                            st.write(f"**{nick}**")
                         
                     total_vol = (group["weight"] * group["reps"]).sum()
                     st.write(f"**총 볼륨:** `{total_vol:,.0f} kg`")
@@ -692,7 +730,7 @@ else:
         else:
             st.info("표시할 데이터가 없습니다.")
 
-    # TAB 5: 팔로우 승인제 관리 (폰트 크기 모바일 대응 축소)
+    # TAB 5: 팔로우 관리
     with tab_friends:
         st.markdown("### 👥 팔로우 관리")
         
@@ -736,6 +774,16 @@ else:
                 if t_id == st.session_state.user_id:
                     st.warning("본인 계정입니다.")
                 else:
+                    t_pic = get_profile_path(t_id)
+                    if t_pic:
+                        with open(t_pic, "rb") as f:
+                            bytes_data = f.read()
+                            import base64
+                            encoded = base64.b64encode(bytes_data).decode()
+                            st.markdown(f'<img src="data:image/png;base64,{encoded}" class="profile-avatar-small">', unsafe_allow_html=True)
+                        if st.button("🔍 사진 확대", key=f"search_pic_{t_id}"):
+                            show_profile_dialog(t_pic, t_nick)
+                            
                     st.write(f"**{t_nick}** ({t_bio if pd.notna(t_bio) else '소개 없음'})")
                     
                     f_match = follows_df[
