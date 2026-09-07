@@ -5,7 +5,8 @@ import time
 import random
 from datetime import datetime
 import urllib.parse
-from PIL import Image
+from PIL import Image, ImageOps
+import base64
 
 # 1. 페이지 기본 설정
 st.set_page_config(page_title="WORKOUT", page_icon="⚡", layout="centered", initial_sidebar_state="collapsed")
@@ -99,18 +100,18 @@ st.markdown(f"""
         margin-bottom: 1.2rem;
     }}
 
-    /* 프로필 원형 아바타 전용 CSS (비율 유지 커버) */
+    /* 세로/가로 비율 보정 및 깔끔한 원형 프로필 */
     .profile-avatar {{
-        width: 65px;
-        height: 65px;
+        width: 58px;
+        height: 58px;
         border-radius: 50%;
         object-fit: cover;
         border: 2px solid #38BDF8;
-        box-shadow: 0 4px 10px rgba(56, 189, 248, 0.2);
+        box-shadow: 0 2px 8px rgba(56, 189, 248, 0.2);
     }}
     .profile-avatar-small {{
-        width: 40px;
-        height: 40px;
+        width: 38px;
+        height: 38px;
         border-radius: 50%;
         object-fit: cover;
         border: 1.5px solid #38BDF8;
@@ -172,7 +173,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 2. DB 초기화
+# DB 초기화
 def init_db():
     if not os.path.exists(USERS_FILE):
         pd.DataFrame(columns=["user_id", "password", "nickname", "bio", "profile_pic"]).to_csv(USERS_FILE, index=False)
@@ -207,12 +208,27 @@ def load_workouts():
 
 def save_data(df, filename): df.to_csv(filename, index=False)
 
+# 이미지 EXIF 자동 회전 보정 처리 함수
+def save_profile_image(uploaded_file, filename):
+    img = Image.open(uploaded_file)
+    try:
+        img = ImageOps.exif_transpose(img) # 스마트폰 세로/가로 메타데이터 강제 보정
+    except Exception:
+        pass
+    img.save(os.path.join(PROFILE_DIR, filename))
+
 def get_profile_path(user_id):
     users = load_users()
     u = users[users["user_id"] == user_id]
     if not u.empty and pd.notna(u.iloc[0].get("profile_pic")) and str(u.iloc[0]["profile_pic"]).strip():
         pic_file = os.path.join(PROFILE_DIR, u.iloc[0]["profile_pic"])
         if os.path.exists(pic_file): return pic_file
+    return None
+
+def get_profile_base64(pic_path):
+    if pic_path and os.path.exists(pic_path):
+        with open(pic_path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
     return None
 
 EXERCISE_TIPS = {
@@ -269,7 +285,7 @@ EXERCISE_TIPS = {
     "프리처 컬": "패드에 삼두를 완전히 밀착시켜 반동을 차단하고 이두의 이완을 최대로 끌어냅니다.",
 
     # 복근 / 유산소
-    "크런치": "허리를 바닥에 붙인 채 상복부만 말아 올려 갈비뼈와 갈골반이 가까워지게 만듭니다.",
+    "크런치": "허리를 바닥에 붙인 채 상복부만 말아 올려 갈비뼈와 골반이 가까워지게 만듭니다.",
     "레그 레이즈": "요추(허리)가 바닥에서 뜨지 않도록 복압을 유지하며 하복부 힘으로 다리를 들어 올립니다.",
     "플랭크": "어깨 아래 팔꿈치를 두고 머리부터 발끝까지 일직선을 만들어 코어 전체에 장력을 줍니다.",
     "천국의 계단(스텝밀)": "발바닥 전체로 계단을 딛고 발 뒤꿈치를 밀어내며 둔근 자극을 살립니다.",
@@ -369,12 +385,6 @@ if "nickname" not in st.session_state: st.session_state.nickname = None
 if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
 if "timer_running" not in st.session_state: st.session_state.timer_running = False
 
-# 프로필 모달(팝업) 확대를 위한 헬퍼 함수
-@st.dialog("프로필 사진 원본")
-def show_profile_dialog(img_path, nick):
-    st.image(img_path, use_column_width=True)
-    st.caption(f"👤 {nick} 님의 프로필 원본")
-
 # --- [로그인 / 회원가입 랜딩] ---
 if st.session_state.user_id is None:
     st.markdown("<div class='brand-title'>WORKOUT</div>", unsafe_allow_html=True)
@@ -427,8 +437,7 @@ if st.session_state.user_id is None:
                     pic_filename = ""
                     if uploaded_pic is not None:
                         pic_filename = f"{new_id}_{int(time.time())}.png"
-                        img = Image.open(uploaded_pic)
-                        img.save(os.path.join(PROFILE_DIR, pic_filename))
+                        save_profile_image(uploaded_pic, pic_filename) # EXIF 회전 보정 저장
                         
                     new_user = pd.DataFrame([{
                         "user_id": new_id, "password": new_pw, 
@@ -448,18 +457,12 @@ if st.session_state.user_id is None:
 else:
     # --- [로그인 완료 메인 화면 헤더] ---
     prof_path = get_profile_path(st.session_state.user_id)
+    prof_b64 = get_profile_base64(prof_path)
     
-    col_h1, col_h2 = st.columns([1.2, 3.8])
+    col_h1, col_h2 = st.columns([1, 3.5])
     with col_h1:
-        if prof_path:
-            # 비율 유지 원형 아바타 출력
-            with open(prof_path, "rb") as f:
-                bytes_data = f.read()
-                import base64
-                encoded = base64.b64encode(bytes_data).decode()
-                st.markdown(f'<img src="data:image/png;base64,{encoded}" class="profile-avatar">', unsafe_allow_html=True)
-            if st.button("🔍 확대", key="btn_view_my_pic"):
-                show_profile_dialog(prof_path, st.session_state.nickname)
+        if prof_b64:
+            st.markdown(f'<img src="data:image/png;base64,{prof_b64}" class="profile-avatar">', unsafe_allow_html=True)
         else:
             st.write("👤")
             
@@ -638,7 +641,7 @@ else:
                 timer_box.markdown("<h2 style='text-align: center; color: #4ADE80;'>🔥 휴식 끝! 다음 세트 시작!</h2>", unsafe_allow_html=True)
                 st.session_state.timer_running = False
 
-    # TAB 3: 팔로우 피드 (프로필 사진 클릭 시 팝업 구현)
+    # TAB 3: 팔로우 피드
     with tab_feed:
         st.markdown("### 📱 팔로워 피드")
         
@@ -662,18 +665,9 @@ else:
                 
                 with st.expander(f"{card_title} - [{routine}]", expanded=True):
                     f_pic = get_profile_path(uid)
-                    if f_pic:
-                        col_pic, col_nick = st.columns([1, 4])
-                        with col_pic:
-                            with open(f_pic, "rb") as f:
-                                bytes_data = f.read()
-                                import base64
-                                encoded = base64.b64encode(bytes_data).decode()
-                                st.markdown(f'<img src="data:image/png;base64,{encoded}" class="profile-avatar-small">', unsafe_allow_html=True)
-                            if st.button("🔍", key=f"feed_pic_{uid}_{date}"):
-                                show_profile_dialog(f_pic, nick)
-                        with col_nick:
-                            st.write(f"**{nick}**")
+                    f_b64 = get_profile_base64(f_pic)
+                    if f_b64:
+                        st.markdown(f'<div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;"><img src="data:image/png;base64,{f_b64}" class="profile-avatar-small"><b>{nick}</b></div>', unsafe_allow_html=True)
                         
                     total_vol = (group["weight"] * group["reps"]).sum()
                     st.write(f"**총 볼륨:** `{total_vol:,.0f} kg`")
@@ -775,14 +769,9 @@ else:
                     st.warning("본인 계정입니다.")
                 else:
                     t_pic = get_profile_path(t_id)
-                    if t_pic:
-                        with open(t_pic, "rb") as f:
-                            bytes_data = f.read()
-                            import base64
-                            encoded = base64.b64encode(bytes_data).decode()
-                            st.markdown(f'<img src="data:image/png;base64,{encoded}" class="profile-avatar-small">', unsafe_allow_html=True)
-                        if st.button("🔍 사진 확대", key=f"search_pic_{t_id}"):
-                            show_profile_dialog(t_pic, t_nick)
+                    t_b64 = get_profile_base64(t_pic)
+                    if t_b64:
+                        st.markdown(f'<img src="data:image/png;base64,{t_b64}" class="profile-avatar-small">', unsafe_allow_html=True)
                             
                     st.write(f"**{t_nick}** ({t_bio if pd.notna(t_bio) else '소개 없음'})")
                     
@@ -863,8 +852,7 @@ else:
                         
                         if new_pic is not None:
                             p_name = f"{st.session_state.user_id}_{int(time.time())}.png"
-                            img = Image.open(new_pic)
-                            img.save(os.path.join(PROFILE_DIR, p_name))
+                            save_profile_image(new_pic, p_name) # EXIF 회전 보정 저장
                             users_df.loc[user_idx[0], "profile_pic"] = p_name
                             
                         workouts_df.loc[workouts_df["user_id"] == st.session_state.user_id, "nickname"] = mod_nick
