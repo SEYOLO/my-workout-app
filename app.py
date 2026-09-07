@@ -6,28 +6,113 @@ import random
 from datetime import datetime
 import urllib.parse
 
-# 1. 페이지 기본 설정
-st.set_page_config(page_title="운동일지", page_icon="⚡", layout="centered", initial_sidebar_state="collapsed")
+# 1. 페이지 기본 설정 및 모던 패션 브랜드풍 스타일링
+st.set_page_config(page_title="운동일지 ⚡", page_icon="⚡", layout="centered", initial_sidebar_state="collapsed")
 
 USERS_FILE = "users.csv"
 FOLLOWS_FILE = "follows.csv"
 WORKOUT_FILE = "workout_data.csv"
 
-# 커스텀 모던 다크 UI CSS
+# Ultra Dark Glassmorphic Modern UI CSS
 st.markdown("""
 <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     * { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }
-    .stApp { background: #090A0F; color: #F1F5F9; }
-    .main-title {
-        font-size: 2.2rem; font-weight: 900; letter-spacing: -0.05em;
-        background: linear-gradient(135deg, #38BDF8 0%, #818CF8 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        text-align: center; margin-top: 0.5rem; margin-bottom: 0.2rem;
+    
+    .stApp {
+        background: #0B0E14;
+        color: #F1F5F9;
     }
-    .sub-title { font-size: 0.88rem; color: #64748B; text-align: center; margin-bottom: 1.5rem; }
+
+    /* 메인 히어로 브랜딩 타이틀 */
+    .hero-container {
+        text-align: center;
+        padding: 2.5rem 1rem 1.5rem 1rem;
+        background: radial-gradient(circle at top, rgba(56, 189, 248, 0.15) 0%, rgba(11, 14, 20, 0) 70%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 1.8rem;
+    }
+    .hero-logo {
+        font-size: 3rem;
+        font-weight: 900;
+        letter-spacing: -0.06em;
+        background: linear-gradient(135deg, #00F2FE 0%, #4FACFE 50%, #60A5FA 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.3rem;
+        text-shadow: 0 0 30px rgba(56, 189, 248, 0.3);
+    }
+    .hero-subtitle {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #94A3B8;
+        letter-spacing: -0.02em;
+    }
+    .hero-tags {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+    .tag {
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid rgba(51, 65, 85, 0.8);
+        color: #38BDF8;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    /* 하이라이트 기능 피처 카드 */
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .feature-card {
+        background: #131722;
+        border: 1px solid #1E293B;
+        border-radius: 12px;
+        padding: 14px 10px;
+        text-align: center;
+    }
+    .feature-icon { font-size: 1.4rem; margin-bottom: 4px; }
+    .feature-title { font-size: 0.8rem; font-weight: 700; color: #E2E8F0; }
+    .feature-desc { font-size: 0.7rem; color: #64748B; margin-top: 2px; }
+
+    /* 고급 카드 컨테이너 */
+    div[data-testid="stForm"], div.stExpander {
+        background: #131722 !important;
+        border: 1px solid #1E293B !important;
+        border-radius: 18px !important;
+        padding: 22px !important;
+        box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7) !important;
+    }
+
+    /* 터치 버튼 디자인 */
+    .stButton > button, div[data-testid="stForm"] button {
+        width: 100% !important;
+        background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 14px 20px !important;
+        font-weight: 800 !important;
+        font-size: 1.05rem !important;
+        letter-spacing: -0.02em !important;
+        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4) !important;
+        transition: all 0.2s ease !important;
+    }
+    .stButton > button:active { transform: scale(0.98); }
+
+    /* 지난 기록 팁 카드 */
     .prev-record-card {
-        background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25);
+        background: rgba(56, 189, 248, 0.08);
+        border: 1px solid rgba(56, 189, 248, 0.25);
         border-radius: 12px; padding: 12px 16px; margin-bottom: 10px;
         display: flex; align-items: center; justify-content: space-between;
     }
@@ -35,23 +120,19 @@ st.markdown("""
     .prev-record-value { font-size: 0.95rem; color: #F8FAFC; font-weight: 800; }
     .guide-box {
         background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3);
-        border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; font-size: 0.85rem; color: #FBBF24;
+        border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.85rem; color: #FBBF24;
     }
-    div[data-testid="stForm"], div.stExpander {
-        background: #11131F !important; border: 1px solid #1E293B !important;
-        border-radius: 16px !important; padding: 18px !important;
-        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5) !important;
-    }
-    .stButton > button, div[data-testid="stForm"] button {
-        width: 100% !important; background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
-        color: #FFFFFF !important; border: none !important; border-radius: 10px !important;
-        padding: 12px 20px !important; font-weight: 700 !important; font-size: 1rem !important;
-        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important; transition: all 0.2s ease !important;
-    }
-    button[data-baseweb="tab"] { font-size: 0.9rem !important; font-weight: 700 !important; color: #64748B !important; }
+
+    /* 탭 헤더 스타일링 */
+    button[data-baseweb="tab"] { font-size: 0.92rem !important; font-weight: 700 !important; color: #64748B !important; }
     button[aria-selected="true"] { color: #38BDF8 !important; border-bottom: 2.5px solid #38BDF8 !important; }
+
     @media (max-width: 640px) {
-        .block-container { padding-left: 0.8rem !important; padding-right: 0.8rem !important; padding-top: 1.2rem !important; }
+        .block-container { padding-left: 0.8rem !important; padding-right: 0.8rem !important; padding-top: 0.5rem !important; }
+        .hero-logo { font-size: 2.5rem; }
+        .feature-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+        .feature-title { font-size: 0.72rem; }
+        .feature-desc { font-size: 0.62rem; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -79,7 +160,6 @@ def load_workouts():
 
 def save_data(df, filename): df.to_csv(filename, index=False)
 
-# 3. 전체 종목 대상 1줄 자세 팁
 EXERCISE_TIPS = {
     "벤치프레스": "견갑(날개뼈)을 고정하고 바벨을 가슴 명치 살짝 위에 밀착시킵니다.",
     "인클라인 벤치프레스": "벤치 각도를 30도 정도로 맞춰 윗가슴 자극에 집중합니다.",
@@ -136,17 +216,26 @@ def generate_dynamic_routine(routine_type):
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "nickname" not in st.session_state: st.session_state.nickname = None
 
-# --- 로그인 / 회원가입 화면 ---
+# --- [고급 랜딩 메인 화면 (로그인 전)] ---
 if st.session_state.user_id is None:
-    st.markdown("<div class='main-title'>⚡ 운동일지</div>", unsafe_allow_html=True)
-    st.markdown("<div class='sub-title'>스마트 세트 일지 & 소셜 피드</div>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="hero-container">
+        <div class="hero-logo">WORKOUT ⚡</div>
+        <div class="hero-subtitle">스마트 세트일지 & 소셜 피드 시스템</div>
+        <div class="hero-tags">
+            <span class="tag">#점진적과부하</span>
+            <span class="tag">#동적루틴추천</span>
+            <span class="tag">#소셜출석</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     auth_tab1, auth_tab2 = st.tabs(["🔑 로그인", "📝 회원가입"])
     users_df = load_users()
     
     with auth_tab1:
         with st.form("login_form", clear_on_submit=False):
-            st.subheader("로그인")
+            st.subheader("계정 접속")
             login_id = st.text_input("아이디", key="login_id").strip()
             login_pw = st.text_input("비밀번호", type="password", key="login_pw").strip()
             submit_login = st.form_submit_button("로그인 (Enter)")
@@ -163,7 +252,7 @@ if st.session_state.user_id is None:
 
     with auth_tab2:
         with st.form("signup_form"):
-            st.subheader("새 계정 만들기")
+            st.subheader("새 계정 생성")
             new_id = st.text_input("사용할 아이디", key="new_id").strip()
             new_pw = st.text_input("비밀번호", type="password", key="new_pw").strip()
             new_nick = st.text_input("앱에서 사용할 닉네임", key="new_nick").strip()
@@ -183,8 +272,29 @@ if st.session_state.user_id is None:
                     save_data(users_df, USERS_FILE)
                     st.success("회원가입 완료! 로그인 탭에서 로그인해 주세요.")
 
+    # 앱 하이라이트 기능 안내 피처 카드
+    st.markdown("""
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="feature-icon">🎲</div>
+            <div class="feature-title">동적 루틴</div>
+            <div class="feature-desc">매일 새로운 자극 조합</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⏱️</div>
+            <div class="feature-title">휴식 타이머</div>
+            <div class="feature-desc">세트간 원클릭 측정</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📱</div>
+            <div class="feature-title">소셜 피드</div>
+            <div class="feature-desc">팔로워 출석 달력</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 else:
-    # --- 메인 앱 화면 ---
+    # --- [로그인 후 메인 앱 화면] ---
     st.sidebar.title(f"⚡ {st.session_state.nickname}")
     st.sidebar.caption(f"ID: {st.session_state.user_id}")
     if st.sidebar.button("로그아웃"):
@@ -192,7 +302,13 @@ else:
         st.session_state.nickname = None
         st.rerun()
         
-    st.markdown("<div class='main-title'>⚡ 운동일지</div>", unsafe_allow_html=True)
+    st.markdown("""
+    <div style="text-align: center; margin-top: 0.5rem; margin-bottom: 1.2rem;">
+        <span style="font-size: 2rem; font-weight: 900; background: linear-gradient(135deg, #00F2FE, #4FACFE); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            WORKOUT ⚡
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
     
     tab_workout, tab_timer, tab_feed, tab_calendar, tab_friends, tab_history = st.tabs([
         "🔥 운동 기록", "⏱️ 타이머", "📱 피드", "📅 소셜 달력", "👥 팔로우", "📊 내 리포트"
@@ -239,7 +355,6 @@ else:
                 for ex in selected_exercises:
                     st.write(f"🏋️ **{ex}**")
                     
-                    # 자세 팁 + 유튜브 영상 링크 가이드 상자 (에러 없이 100% 작동)
                     tip_text = EXERCISE_TIPS.get(ex, "자극 부위에 집중하여 바른 자세로 수행합니다.")
                     yt_link = get_yt_url(ex)
                     st.markdown(f"""
@@ -248,7 +363,6 @@ else:
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # 지난 기록 자동 안내
                     ex_past = my_past_workouts[my_past_workouts["exercise"] == ex]
                     if not ex_past.empty:
                         max_w = ex_past["weight"].max()
