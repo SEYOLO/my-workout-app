@@ -16,7 +16,7 @@ WORKOUT_FILE = "workout_data.csv"
 APP_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
 AVATAR_OPTIONS = ["🦁 사자", "🐯 호랑이", "🐻 곰", "🐺 늑대", "🦅 독수리", "🦈 상어", "🦍 고릴라", "⚡ 번개"]
 
-# 모바일 대응 및 이모지 프로필 CSS
+# 모바일 전용 CSS 및 상단 헤더 정렬
 st.markdown(f"""
 <head>
     <link rel="apple-touch-icon" href="{APP_ICON_URL}">
@@ -36,7 +36,7 @@ st.markdown(f"""
     }}
 
     .block-container {{
-        padding-top: max(2.8rem, env(safe-area-inset-top)) !important;
+        padding-top: max(1.8rem, env(safe-area-inset-top)) !important;
         padding-bottom: max(2.0rem, env(safe-area-inset-bottom)) !important;
     }}
 
@@ -80,30 +80,56 @@ st.markdown(f"""
     }}
 
     .brand-title {{
-        font-size: 1.8rem;
+        font-size: 1.6rem;
         font-weight: 800;
         letter-spacing: -0.05em;
         color: #F8FAFC;
         text-align: center;
-        margin-top: 0.2rem;
-        margin-bottom: 0.2rem;
+        margin-top: 0.1rem;
+        margin-bottom: 0.6rem;
     }}
 
-    .avatar-badge {{
-        font-size: 2.2rem;
-        background: rgba(56, 189, 248, 0.1);
+    /* 컴팩트 헤더 프로필 박스 규격 재정렬 */
+    .header-profile-card {{
+        background: rgba(30, 41, 59, 0.4);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        border-radius: 12px;
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }}
+    .header-avatar-circle {{
+        font-size: 1.6rem;
+        background: rgba(56, 189, 248, 0.12);
         border: 1px solid rgba(56, 189, 248, 0.3);
         border-radius: 50%;
-        width: 55px;
-        height: 55px;
+        width: 44px;
+        height: 44px;
         display: flex;
         align-items: center;
         justify-content: center;
+        flex-shrink: 0;
+    }}
+    .header-user-info {{
+        margin-left: 10px;
+        flex-grow: 1;
+    }}
+    .header-user-name {{
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #F8FAFC;
+        line-height: 1.2;
+    }}
+    .header-user-id {{
+        font-size: 0.75rem;
+        color: #64748B;
     }}
 
-    h1 {{ font-size: 1.6rem !important; }}
-    h2 {{ font-size: 1.3rem !important; margin-top: 0.8rem !important; margin-bottom: 0.5rem !important; }}
-    h3 {{ font-size: 1.05rem !important; margin-top: 0.6rem !important; margin-bottom: 0.4rem !important; }}
+    h1 {{ font-size: 1.5rem !important; }}
+    h2 {{ font-size: 1.2rem !important; margin-top: 0.8rem !important; margin-bottom: 0.5rem !important; }}
+    h3 {{ font-size: 1.0rem !important; margin-top: 0.6rem !important; margin-bottom: 0.4rem !important; }}
 
     .stButton > button {{
         width: 100% !important;
@@ -146,7 +172,7 @@ st.markdown(f"""
 
     @media (max-width: 640px) {{
         .block-container {{ padding-left: 0.5rem !important; padding-right: 0.5rem !important; }}
-        .brand-title {{ font-size: 1.5rem; }}
+        .brand-title {{ font-size: 1.4rem; }}
     }}
 </style>
 
@@ -196,7 +222,7 @@ def get_user_avatar(user_id):
     users = load_users()
     u = users[users["user_id"] == user_id]
     if not u.empty and pd.notna(u.iloc[0].get("avatar")):
-        return str(u.iloc[0]["avatar"]).split()[0] # 이모지만 추출
+        return str(u.iloc[0]["avatar"]).split()[0]
     return "🦁"
 
 EXERCISE_TIPS = {
@@ -290,8 +316,9 @@ ANATOMICAL_POOL = {
 
 ALL_EXERCISES = list(set(sum(ANATOMICAL_POOL.values(), [])))
 
-def generate_capped_routine(selected_parts, target_options):
-    random.seed(time.time())
+# 동적 시드(Seed) 적용 추천 로직
+def generate_capped_routine(selected_parts, target_options, seed_val):
+    random.seed(seed_val)
     num_parts = len(selected_parts)
     recommended = []
     
@@ -352,6 +379,7 @@ if "user_id" not in st.session_state: st.session_state.user_id = None
 if "nickname" not in st.session_state: st.session_state.nickname = None
 if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
 if "timer_running" not in st.session_state: st.session_state.timer_running = False
+if "routine_seed" not in st.session_state: st.session_state.routine_seed = int(time.time())
 
 # --- [로그인 / 회원가입 랜딩] ---
 if st.session_state.user_id is None:
@@ -418,22 +446,27 @@ if st.session_state.user_id is None:
             st.rerun()
 
 else:
-    # --- [로그인 완료 메인 화면 헤더] ---
+    # --- [로그인 완료 메인 화면 깔끔한 상단 헤더 모듈] ---
     my_avatar = get_user_avatar(st.session_state.user_id)
     
-    col_h1, col_h2 = st.columns([1, 4])
-    with col_h1:
-        st.markdown(f'<div class="avatar-badge">{my_avatar}</div>', unsafe_allow_html=True)
-            
-    with col_h2:
-        st.markdown(f"**{st.session_state.nickname}**")
-        st.caption(f"ID: {st.session_state.user_id}")
+    col_card, col_btn = st.columns([3.5, 1.2])
+    with col_card:
+        st.markdown(f"""
+        <div class="header-profile-card">
+            <div class="header-avatar-circle">{my_avatar}</div>
+            <div class="header-user-info">
+                <div class="header-user-name">{st.session_state.nickname}</div>
+                <div class="header-user-id">@{st.session_state.user_id}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_btn:
         if st.button("로그아웃", key="btn_logout"):
             st.session_state.user_id = None
             st.session_state.nickname = None
             st.rerun()
             
-    st.markdown("<div class='brand-title' style='margin-top:0.4rem;'>WORKOUT ⚡</div>", unsafe_allow_html=True)
+    st.markdown("<div class='brand-title'>WORKOUT ⚡</div>", unsafe_allow_html=True)
     
     tab_workout, tab_timer, tab_feed, tab_calendar, tab_friends, tab_profile = st.tabs([
         "기록", "타이머", "피드", "달력", "팔로우", "프로필"
@@ -455,8 +488,14 @@ else:
         recommended_list = []
         
         if split_type == "무분할 (전신 4대 운동)":
-            st.info("💡 **[무분할 모드]** 전신을 커버하는 메인 대근육 운동 4개가 자동 추천됩니다.")
-            recommended_list = ["스쿼트", "벤치프레스", "렛풀다운", "오버헤드 프레스"]
+            random.seed(st.session_state.routine_seed)
+            # 무분할 전신 4대 대근육 무작위 추천
+            recommended_list = [
+                random.choice(["스쿼트", "레그프레스"]),
+                random.choice(["벤치프레스", "인클라인 벤치프레스", "덤벨 벤치프레스"]),
+                random.choice(["데드리프트", "렛풀다운", "바벨로우", "풀업"]),
+                random.choice(["오버헤드 프레스", "덤벨 숄더프레스", "딥스"])
+            ]
             selected_parts = ["전신"]
             
         elif split_type == "분할 운동 (부위 지정)":
@@ -475,15 +514,17 @@ else:
                     else:
                         target_options[p] = "기본"
                 
-                recommended_list = generate_capped_routine(selected_parts, target_options)
+                recommended_list = generate_capped_routine(selected_parts, target_options, st.session_state.routine_seed)
 
         selected_exercises = []
         if recommended_list or split_type == "자율 선택":
             if recommended_list:
-                col_rec1, col_rec2 = st.columns([3, 1])
-                with col_rec1: st.success(f"🎯 **[추천 조합]** 총 {len(recommended_list)}개 종목으로 볼륨 최적화됨")
+                col_rec1, col_rec2 = st.columns([2.8, 1.2])
+                with col_rec1: st.success(f"🎯 **[추천]** 총 {len(recommended_list)}개 종목 구성됨")
                 with col_rec2:
-                    if st.button("🎲 재추천"):
+                    # 모바일 세션 시드 강제 변경 방식 적용
+                    if st.button("🎲 재추천", key="btn_re_recommend"):
+                        st.session_state.routine_seed = int(time.time() * 1000)
                         st.rerun()
             
             selected_exercises = st.multiselect(
