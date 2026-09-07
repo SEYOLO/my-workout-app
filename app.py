@@ -5,6 +5,7 @@ import time
 import random
 from datetime import datetime
 import urllib.parse
+from PIL import Image
 
 # 1. 페이지 기본 설정
 st.set_page_config(page_title="WORKOUT", page_icon="⚡", layout="centered", initial_sidebar_state="collapsed")
@@ -12,8 +13,12 @@ st.set_page_config(page_title="WORKOUT", page_icon="⚡", layout="centered", ini
 USERS_FILE = "users.csv"
 FOLLOWS_FILE = "follows.csv"
 WORKOUT_FILE = "workout_data.csv"
+PROFILE_DIR = "profile_pics"
 
-# Minimalistic Modern Dark UI + Full-Width Segmented Control CSS
+if not os.path.exists(PROFILE_DIR):
+    os.makedirs(PROFILE_DIR)
+
+# Minimalistic Modern Dark UI + Responsive Segmented Control
 st.markdown("""
 <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
@@ -24,14 +29,13 @@ st.markdown("""
         color: #E2E8F0;
     }
 
-    /* 상단 브랜드 타이틀 */
     .brand-title {
         font-size: 2.2rem;
         font-weight: 800;
         letter-spacing: -0.05em;
         color: #F8FAFC;
         text-align: center;
-        margin-top: 1.5rem;
+        margin-top: 1rem;
         margin-bottom: 0.2rem;
     }
     .brand-sub {
@@ -41,7 +45,7 @@ st.markdown("""
         margin-bottom: 2rem;
     }
 
-    /* 탭 메뉴 균등 분할 스타일링 */
+    /* 탭 메뉴 균등 분할 레이아웃 */
     div[data-baseweb="tab-list"] {
         display: flex !important;
         width: 100% !important;
@@ -74,16 +78,15 @@ st.markdown("""
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
     }
 
-    /* 단일 폼 및 카드 박스 */
+    /* 단일 폼 박스 */
     div[data-testid="stForm"] {
         background: #14161D !important;
         border: 1px solid #222634 !important;
         border-radius: 16px !important;
-        padding: 24px !important;
+        padding: 22px !important;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
     }
 
-    /* 버튼 스타일 */
     .stButton > button, div[data-testid="stForm"] button {
         width: 100% !important;
         background: #2563EB !important;
@@ -97,7 +100,6 @@ st.markdown("""
     }
     .stButton > button:hover { background: #1D4ED8 !important; }
 
-    /* 안내 카드 */
     .prev-record-card {
         background: rgba(56, 189, 248, 0.05);
         border: 1px solid rgba(56, 189, 248, 0.2);
@@ -114,17 +116,23 @@ st.markdown("""
     }
 
     @media (max-width: 640px) {
-        .block-container { padding-left: 0.8rem !important; padding-right: 0.8rem !important; padding-top: 1rem !important; }
-        .brand-title { font-size: 1.8rem; }
-        button[data-baseweb="tab"] { font-size: 0.78rem !important; padding: 8px 0px !important; }
+        .block-container { padding-left: 0.6rem !important; padding-right: 0.6rem !important; padding-top: 0.8rem !important; }
+        .brand-title { font-size: 1.7rem; }
+        button[data-baseweb="tab"] { font-size: 0.75rem !important; padding: 8px 0px !important; }
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 2. DB 초기화 함수
+# 2. DB 초기화
 def init_db():
     if not os.path.exists(USERS_FILE):
-        pd.DataFrame(columns=["user_id", "password", "nickname", "bio"]).to_csv(USERS_FILE, index=False)
+        pd.DataFrame(columns=["user_id", "password", "nickname", "bio", "profile_pic"]).to_csv(USERS_FILE, index=False)
+    else:
+        users = pd.read_csv(USERS_FILE, dtype=str)
+        if "profile_pic" not in users.columns:
+            users["profile_pic"] = ""
+            users.to_csv(USERS_FILE, index=False)
+            
     if not os.path.exists(FOLLOWS_FILE):
         pd.DataFrame(columns=["follower_id", "following_id"]).to_csv(FOLLOWS_FILE, index=False)
     if not os.path.exists(WORKOUT_FILE):
@@ -143,6 +151,14 @@ def load_workouts():
     return df
 
 def save_data(df, filename): df.to_csv(filename, index=False)
+
+def get_profile_path(user_id):
+    users = load_users()
+    u = users[users["user_id"] == user_id]
+    if not u.empty and pd.notna(u.iloc[0].get("profile_pic")) and str(u.iloc[0]["profile_pic"]).strip():
+        pic_file = os.path.join(PROFILE_DIR, u.iloc[0]["profile_pic"])
+        if os.path.exists(pic_file): return pic_file
+    return None
 
 EXERCISE_TIPS = {
     "벤치프레스": "견갑(날개뼈)을 고정하고 바벨을 가슴 명치 살짝 위에 밀착시킵니다.",
@@ -200,8 +216,9 @@ def generate_dynamic_routine(routine_type):
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "nickname" not in st.session_state: st.session_state.nickname = None
 if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
+if "timer_running" not in st.session_state: st.session_state.timer_running = False
 
-# --- [단일 로그인/회원가입 랜딩] ---
+# --- [로그인 / 회원가입 랜딩] ---
 if st.session_state.user_id is None:
     st.markdown("<div class='brand-title'>WORKOUT</div>", unsafe_allow_html=True)
     st.markdown("<div class='brand-sub'>Personal Set Log & Social Feed</div>", unsafe_allow_html=True)
@@ -213,7 +230,6 @@ if st.session_state.user_id is None:
             st.write("### 로그인")
             login_id = st.text_input("아이디", key="l_id").strip()
             login_pw = st.text_input("비밀번호", type="password", key="l_pw").strip()
-            
             submit_login = st.form_submit_button("시작하기")
             
             if submit_login:
@@ -239,6 +255,7 @@ if st.session_state.user_id is None:
             new_pw = st.text_input("비밀번호", type="password", key="s_pw").strip()
             new_nick = st.text_input("닉네임", key="s_nick").strip()
             new_bio = st.text_input("한 줄 소개 (선택)", key="s_bio", placeholder="목표나 다짐").strip()
+            uploaded_pic = st.file_uploader("프로필 사진 선택 (앨범)", type=["jpg", "jpeg", "png"])
             
             submit_signup = st.form_submit_button("가입 완료")
             
@@ -250,10 +267,20 @@ if st.session_state.user_id is None:
                 elif new_nick in users_df["nickname"].values:
                     st.error("이미 사용 중인 닉네임입니다.")
                 else:
-                    new_user = pd.DataFrame([{"user_id": new_id, "password": new_pw, "nickname": new_nick, "bio": new_bio}])
+                    pic_filename = ""
+                    if uploaded_pic is not None:
+                        pic_filename = f"{new_id}_{int(time.time())}.png"
+                        img = Image.open(uploaded_pic)
+                        img.save(os.path.join(PROFILE_DIR, pic_filename))
+                        
+                    new_user = pd.DataFrame([{
+                        "user_id": new_id, "password": new_pw, 
+                        "nickname": new_nick, "bio": new_bio, 
+                        "profile_pic": pic_filename
+                    }])
                     users_df = pd.concat([users_df, new_user], ignore_index=True)
                     save_data(users_df, USERS_FILE)
-                    st.success("회원가입이 완료되었습니다!")
+                    st.success("회원가입 완료! 로그인해 주세요.")
                     st.session_state.auth_mode = "login"
                     st.rerun()
                     
@@ -262,19 +289,29 @@ if st.session_state.user_id is None:
             st.rerun()
 
 else:
-    # --- [로그인 완료 후 메인 앱 화면] ---
-    st.sidebar.title(f"⚡ {st.session_state.nickname}")
-    st.sidebar.caption(f"ID: {st.session_state.user_id}")
+    # --- [로그인 완료 메인 화면] ---
+    prof_path = get_profile_path(st.session_state.user_id)
+    
+    col_h1, col_h2 = st.columns([1, 4])
+    with col_h1:
+        if prof_path:
+            st.image(prof_path, width=55)
+        else:
+            st.write("👤")
+    with col_h2:
+        st.markdown(f"**{st.session_state.nickname}**")
+        st.caption(f"ID: {st.session_state.user_id}")
+        
     if st.sidebar.button("로그아웃"):
         st.session_state.user_id = None
         st.session_state.nickname = None
         st.rerun()
         
-    st.markdown("<div class='brand-title' style='margin-top:0; font-size:1.8rem;'>WORKOUT ⚡</div>", unsafe_allow_html=True)
+    st.markdown("<div class='brand-title' style='margin-top:0; font-size:1.6rem;'>WORKOUT ⚡</div>", unsafe_allow_html=True)
     
-    # 100% 균등 분할 세그먼트 메뉴 적용
-    tab_workout, tab_timer, tab_feed, tab_calendar, tab_friends, tab_history = st.tabs([
-        "기록", "타이머", "피드", "달력", "팔로우", "리포트"
+    # 균등 분할 세그먼트 메뉴 탭
+    tab_workout, tab_timer, tab_feed, tab_calendar, tab_friends, tab_profile = st.tabs([
+        "기록", "타이머", "피드", "달력", "팔로우", "프로필"
     ])
     
     workouts_df = load_workouts()
@@ -371,32 +408,47 @@ else:
                     save_data(workouts_df, WORKOUT_FILE)
                     st.success("성공적으로 저장되었습니다!")
 
-    # TAB 2: 세트 간 휴식 타이머
+    # TAB 2: 세트 간 휴식 타이머 (중단 버튼 추가)
     with tab_timer:
         st.subheader("⏱️ 휴식 타이머")
         tc1, tc2, tc3, tc4 = st.columns(4)
-        set_seconds = 0
+        
+        target_sec = 0
         with tc1:
-            if st.button("60초"): set_seconds = 60
+            if st.button("60초"): target_sec = 60
         with tc2:
-            if st.button("90초"): set_seconds = 90
+            if st.button("90초"): target_sec = 90
         with tc3:
-            if st.button("120초"): set_seconds = 120
+            if st.button("120초"): target_sec = 120
         with tc4:
-            if st.button("180초"): set_seconds = 180
+            if st.button("180초"): target_sec = 180
             
         custom_sec = st.number_input("직접 초 입력", min_value=0, step=10, value=0)
-        if custom_sec > 0 and st.button("시작"): set_seconds = custom_sec
+        if custom_sec > 0 and st.button("타이머 시작"): target_sec = custom_sec
             
-        if set_seconds > 0:
-            timer_placeholder = st.empty()
-            progress_bar = st.progress(1.0)
-            for remaining in range(set_seconds, -1, -1):
+        if target_sec > 0:
+            st.session_state.timer_running = True
+            timer_box = st.empty()
+            p_bar = st.progress(1.0)
+            
+            stop_col1, stop_col2 = st.columns([3, 1])
+            with stop_col2:
+                stop_btn = st.button("⏹️ 중단")
+                
+            for remaining in range(target_sec, -1, -1):
+                if stop_btn or not st.session_state.timer_running:
+                    st.session_state.timer_running = False
+                    timer_box.markdown("<h3 style='text-align:center; color:#EF4444;'>⏹️ 타이머가 중단되었습니다.</h3>", unsafe_allow_html=True)
+                    break
+                    
                 mins, secs = divmod(remaining, 60)
-                timer_placeholder.markdown(f"<h1 style='text-align: center; color: #38BDF8; font-size: 3.8rem; font-weight: 800;'>{mins:02d}:{secs:02d}</h1>", unsafe_allow_html=True)
-                progress_bar.progress(remaining / set_seconds)
+                timer_box.markdown(f"<h1 style='text-align: center; color: #38BDF8; font-size: 3.8rem; font-weight: 800;'>{mins:02d}:{secs:02d}</h1>", unsafe_allow_html=True)
+                p_bar.progress(remaining / target_sec)
                 time.sleep(1)
-            timer_placeholder.markdown("<h1 style='text-align: center; color: #4ADE80; font-size: 1.8rem; font-weight: 700;'>🔥 휴식 끝! 다음 세트 시작!</h1>", unsafe_allow_html=True)
+                
+            if remaining == 0 and st.session_state.timer_running:
+                timer_box.markdown("<h1 style='text-align: center; color: #4ADE80; font-size: 1.8rem; font-weight: 700;'>🔥 휴식 끝! 다음 세트 시작!</h1>", unsafe_allow_html=True)
+                st.session_state.timer_running = False
 
     # TAB 3: 팔로우 피드
     with tab_feed:
@@ -415,7 +467,12 @@ else:
             for (date, nick, routine, uid), group in sorted(grouped, key=lambda x: x[0][0], reverse=True):
                 is_me = (uid == st.session_state.user_id)
                 card_title = f"💪 {nick} ({date})" if not is_me else f"💪 나 ({date})"
+                
                 with st.expander(f"{card_title} - [{routine}]", expanded=True):
+                    f_pic = get_profile_path(uid)
+                    if f_pic:
+                        st.image(f_pic, width=40)
+                        
                     total_vol = (group["weight"] * group["reps"] * group["set_num"]).sum()
                     st.write(f"**볼륨:** `{total_vol:,.0f} kg`")
                     ex_summary = group.groupby("exercise").agg({"set_num": "max", "weight": "max"}).reset_index()
@@ -427,7 +484,7 @@ else:
         else:
             st.info("기록이 없습니다.")
 
-    # TAB 4: 팔로워 통합 출석 달력
+    # TAB 4: 팔로워 출석 달력
     with tab_calendar:
         st.subheader("📅 출석 달력")
         follows_df = load_follows()
@@ -508,11 +565,50 @@ else:
         else:
             st.caption("팔로우 중인 친구가 없습니다.")
 
-    # TAB 6: 내 리포트 및 성장 분석
-    with tab_history:
-        st.subheader("📊 성장 리포트")
-        my_df = workouts_df[workouts_df["user_id"] == st.session_state.user_id]
+    # TAB 6: 내 프로필 수정 및 리포트
+    with tab_profile:
+        st.subheader("⚙️ 프로필 관리 & 리포트")
+        users_df = load_users()
+        user_idx = users_df[users_df["user_id"] == st.session_state.user_id].index
         
+        if not user_idx.empty:
+            curr_row = users_df.loc[user_idx[0]]
+            
+            # 프로필 수정 폼
+            with st.form("edit_profile_form"):
+                st.write("### 프로필 정보 수정")
+                
+                mod_nick = st.text_input("닉네임 변경", value=curr_row["nickname"]).strip()
+                mod_bio = st.text_input("한 줄 소개 변경", value=curr_row.get("bio", "")).strip()
+                new_pic = st.file_uploader("프로필 사진 변경 (앨범)", type=["jpg", "jpeg", "png"])
+                
+                if st.form_submit_button("프로필 저장"):
+                    if not mod_nick:
+                        st.error("닉네임은 비워둘 수 없습니다.")
+                    elif mod_nick != curr_row["nickname"] and mod_nick in users_df["nickname"].values:
+                        st.error("이미 사용 중인 닉네임입니다.")
+                    else:
+                        users_df.loc[user_idx[0], "nickname"] = mod_nick
+                        users_df.loc[user_idx[0], "bio"] = mod_bio
+                        
+                        if new_pic is not None:
+                            p_name = f"{st.session_state.user_id}_{int(time.time())}.png"
+                            img = Image.open(new_pic)
+                            img.save(os.path.join(PROFILE_DIR, p_name))
+                            users_df.loc[user_idx[0], "profile_pic"] = p_name
+                            
+                        # 운동 기록 파일의 닉네임 변경 반영
+                        workouts_df.loc[workouts_df["user_id"] == st.session_state.user_id, "nickname"] = mod_nick
+                        save_data(workouts_df, WORKOUT_FILE)
+                        save_data(users_df, USERS_FILE)
+                        
+                        st.session_state.nickname = mod_nick
+                        st.success("프로필 수정 완료!")
+                        st.rerun()
+
+        st.divider()
+        st.subheader("📊 내 성장 리포트")
+        my_df = workouts_df[workouts_df["user_id"] == st.session_state.user_id]
         if not my_df.empty:
             my_df["volume"] = my_df["weight"] * my_df["reps"] * my_df["set_num"]
             total_vol = my_df["volume"].sum()
@@ -520,9 +616,5 @@ else:
             
             vol_by_date = my_df.groupby("date")["volume"].sum().reset_index()
             st.line_chart(vol_by_date.set_index("date"))
-            
-            st.divider()
-            st.write("### 데이터 기록")
-            st.dataframe(my_df.sort_values(by="date", ascending=False), use_container_width=True)
         else:
-            st.info("기록이 없습니다.")
+            st.info("등록된 기록이 없습니다.")
