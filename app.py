@@ -10,10 +10,11 @@ import extra_streamlit_components as stx
 # 1. 페이지 기본 설정
 st.set_page_config(page_title="WORKOUT", page_icon="⚡", layout="centered", initial_sidebar_state="collapsed")
 
-# 쿠키 매니저 초기화 (최신 Streamlit 호환 데코레이터 적용)
-@st.cache_resource
-def get_cookie_manager():
-    return stx.CookieManager()
+# 기존의 @st.cache_resource 함수 전체를 지우고 아래 3줄로 교체
+if "cookie_manager" not in st.session_state:
+    st.session_state.cookie_manager = stx.CookieManager()
+
+cookie_manager = st.session_state.cookie_manager
 
 cookie_manager = get_cookie_manager()
 
