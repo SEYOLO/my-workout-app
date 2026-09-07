@@ -20,7 +20,7 @@ if not os.path.exists(PROFILE_DIR):
 
 APP_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
 
-# 모바일 상단 잘림 방지 + 모던 다크 스플래시 CSS
+# 모바일 대응 및 다크 모드 CSS
 st.markdown(f"""
 <head>
     <link rel="apple-touch-icon" href="{APP_ICON_URL}">
@@ -244,9 +244,8 @@ def get_yt_url(exercise_name):
     encoded_query = urllib.parse.quote(query)
     return f"https://www.youtube.com/results?search_query={encoded_query}"
 
-# 세분화된 해부학적 운동 풀
 ANATOMICAL_POOL = {
-    "가슴_상부": ["인클라인 벤치프레스", "인클라인 덤벨 벤치프레스", "인클라인 덤벨 플라이"],
+    "가슴_상부": ["인클라인 벤치프레스", "인클라인 덤벨 벤치프레스"],
     "가슴_중부": ["벤치프레스", "덤벨 벤치프레스", "체스트 프레스 머신", "펙덱 플라이 머신"],
     "가슴_하부": ["딥스", "케이블 크로스오버"],
     
@@ -269,51 +268,66 @@ ANATOMICAL_POOL = {
 
 ALL_EXERCISES = list(set(sum(ANATOMICAL_POOL.values(), [])))
 
-# 부위별 타겟에 따른 세부 종목 조합 생성기
-def generate_custom_target_exercises(part, target_option):
+# 볼륨 수치 제한(Capping) 알고리즘 적용 루틴 추천 함수
+def generate_capped_routine(selected_parts, target_options):
     random.seed(time.time())
-    res = []
+    num_parts = len(selected_parts)
+    recommended = []
     
-    if part == "가슴":
-        if target_option == "가슴 전체":
-            res = [random.choice(ANATOMICAL_POOL["가슴_상부"]), random.choice(ANATOMICAL_POOL["가슴_중부"]), random.choice(ANATOMICAL_POOL["가슴_하부"])]
-        elif target_option == "윗가슴 집중":
-            res = [ANATOMICAL_POOL["가슴_상부"][0], ANATOMICAL_POOL["가슴_상부"][1], random.choice(ANATOMICAL_POOL["가슴_중부"])]
-        elif target_option == "아랫가슴 집중":
-            res = ["딥스", "케이블 크로스오버", random.choice(ANATOMICAL_POOL["가슴_중부"])]
-            
-    elif part == "등":
-        if target_option == "등 전체":
-            res = [random.choice(ANATOMICAL_POOL["등_너비"]), random.choice(ANATOMICAL_POOL["등_두께"]), random.choice(ANATOMICAL_POOL["등_너비"])]
-        elif target_option == "너비(수직) 집중":
-            res = ["풀업", "렛풀다운", "암 풀다운"]
-        elif target_option == "두께(수평) 집중":
-            res = ["바벨로우", "시티드 케이블 로우", "원암 덤벨로우"]
-            
-    elif part == "하체":
-        if target_option == "하체 전체":
-            res = [random.choice(ANATOMICAL_POOL["하체_전면"]), random.choice(ANATOMICAL_POOL["하체_후면"]), random.choice(ANATOMICAL_POOL["하체_내외전"])]
-        elif target_option == "전면(사두) 집중":
-            res = ["스쿼트", "레그프레스", "레그 익스텐션"]
-        elif target_option == "후면(둔근/햄스트링) 집중":
-            res = ["스티프 레그 데드리프트", "레그 컬", "런지"]
-            
-    elif part == "어깨":
-        if target_option == "입체감 전체":
-            res = [random.choice(ANATOMICAL_POOL["어깨_전면"]), random.choice(ANATOMICAL_POOL["어깨_측면"]), random.choice(ANATOMICAL_POOL["어깨_후면"])]
-        elif target_option == "측면 집중":
-            res = [random.choice(ANATOMICAL_POOL["어깨_측면"]), random.choice(ANATOMICAL_POOL["어깨_전면"]), "사이드 레터럴 레이즈"]
-        elif target_option == "후면 집중":
-            res = ["벤트오버 레터럴 레이즈", "페이스풀", random.choice(ANATOMICAL_POOL["어깨_전면"])]
-            
-    elif part == "이두":
-        res = random.sample(ANATOMICAL_POOL["이두"], 2)
-    elif part == "삼두":
-        res = random.sample(ANATOMICAL_POOL["삼두"], 2)
-    elif part == "복근/유산소":
-        res = random.sample(ANATOMICAL_POOL["복근/유산소"], 2)
+    # 선택된 총 부위 수에 따라 부위당 종목 할당량 동적 조절
+    for part in selected_parts:
+        t_opt = target_options.get(part, "기본")
         
-    return res
+        if part == "가슴":
+            if num_parts == 1:
+                if t_opt == "윗가슴 집중": pool = ["인클라인 벤치프레스", "인클라인 덤벨 벤치프레스", "인클라인 덤벨 플라이", "펙덱 플라이 머신"]
+                elif t_opt == "아랫가슴 집중": pool = ["딥스", "케이블 크로스오버", "벤치프레스", "펙덱 플라이 머신"]
+                else: pool = ["벤치프레스", "인클라인 덤벨 벤치프레스", "펙덱 플라이 머신", "딥스"]
+            elif num_parts == 2:
+                if t_opt == "윗가슴 집중": pool = ["인클라인 벤치프레스", "인클라인 덤벨 벤치프레스", "펙덱 플라이 머신"]
+                elif t_opt == "아랫가슴 집중": pool = ["딥스", "케이블 크로스오버", "벤치프레스"]
+                else: pool = ["벤치프레스", "인클라인 벤치프레스", "펙덱 플라이 머신"]
+            else:
+                pool = [random.choice(ANATOMICAL_POOL["가슴_상부"] if t_opt == "윗가슴 집중" else ANATOMICAL_POOL["가슴_중부"])]
+            recommended.extend(pool)
+            
+        elif part == "등":
+            if num_parts == 1:
+                if t_opt == "너비(수직) 집중": pool = ["풀업", "렛풀다운", "암 풀다운", "시티드 케이블 로우"]
+                elif t_opt == "두께(수평) 집중": pool = ["바벨로우", "시티드 케이블 로우", "원암 덤벨로우", "렛풀다운"]
+                else: pool = ["데드리프트", "렛풀다운", "바벨로우", "시티드 케이블 로우"]
+            elif num_parts == 2:
+                if t_opt == "너비(수직) 집중": pool = ["풀업", "렛풀다운", "바벨로우"]
+                elif t_opt == "두께(수평) 집중": pool = ["바벨로우", "시티드 케이블 로우", "렛풀다운"]
+                else: pool = ["렛풀다운", "바벨로우", "시티드 케이블 로우"]
+            else:
+                pool = [random.choice(ANATOMICAL_POOL["등_너비"] if t_opt == "너비(수직) 집중" else ANATOMICAL_POOL["등_두께"])]
+            recommended.extend(pool)
+            
+        elif part == "하체":
+            if num_parts == 1:
+                pool = ["스쿼트", "레그프레스", "스티프 레그 데드리프트", "레그 익스텐션"]
+            elif num_parts == 2:
+                pool = ["스쿼트", "레그프레스", "레그 컬"]
+            else:
+                pool = [random.choice(ANATOMICAL_POOL["하체_전면"])]
+            recommended.extend(pool)
+            
+        elif part == "어깨":
+            if num_parts == 1:
+                pool = ["오버헤드 프레스", "사이드 레터럴 레이즈", "벤트오버 레터럴 레이즈", "덤벨 숄더프레스"]
+            elif num_parts == 2:
+                pool = ["오버헤드 프레스", "사이드 레터럴 레이즈", "페이스풀"]
+            else:
+                pool = [random.choice(ANATOMICAL_POOL["어깨_전면"] if t_opt != "측면 집중" else ANATOMICAL_POOL["어깨_측면"])]
+            recommended.extend(pool)
+            
+        elif part in ["이두", "삼두", "복근/유산소"]:
+            count = 2 if num_parts <= 2 else 1
+            recommended.extend(random.sample(ANATOMICAL_POOL[part], count))
+            
+    # 전체 추천 종목 수가 5개를 넘지 않도록 조정
+    return list(dict.fromkeys(recommended))[:5]
 
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "nickname" not in st.session_state: st.session_state.nickname = None
@@ -417,24 +431,26 @@ else:
 
     workouts_df = load_workouts()
     
-    # TAB 1: 운동 기록 작성 (단계별 자유 커스텀 루틴 시스템)
+    # TAB 1: 운동 기록 작성 (볼륨 제한 및 자율 수정 지원)
     with tab_workout:
         st.subheader("오늘의 운동 세팅")
         today_date = st.date_input("운동 날짜", datetime.now())
         
-        # Step 1: 분할 체계 선택
-        split_type = st.selectbox("Step 1. 분할 체계 선택", ["선택 안함", "무분할 (전신)", "2분할", "3분할", "4분할 이상", "자율 선택"])
+        split_type = st.selectbox("Step 1. 루틴 방식 선택", ["선택 안함", "무분할 (전신 4대 운동)", "분할 운동 (부위 지정)", "자율 선택"])
         
         selected_parts = []
         target_options = {}
+        recommended_list = []
         
-        if split_type != "선택 안함" and split_type != "자율 선택":
-            # Step 2: 당일 수행할 메인 부위 선택 (다중 선택 가능)
-            st.write("### Step 2. 오늘 수행할 부위 선택")
-            available_parts = ["가슴", "등", "하체", "어깨", "이두", "삼두", "복근/유산소"]
-            selected_parts = st.multiselect("수행 부위 (복수 선택 가능)", available_parts)
+        if split_type == "무분할 (전신 4대 운동)":
+            st.info("💡 **[무분할 모드]** 전신을 커버하는 메인 대근육 운동 4개가 자동 추천됩니다.")
+            recommended_list = ["스쿼트", "벤치프레스", "렛풀다운", "오버헤드 프레스"]
+            selected_parts = ["전신"]
             
-            # Step 3: 선택한 부위별 세부 타겟 지정
+        elif split_type == "분할 운동 (부위 지정)":
+            available_parts = ["가슴", "등", "하체", "어깨", "이두", "삼두", "복근/유산소"]
+            selected_parts = st.multiselect("Step 2. 오늘 수행할 부위 선택 (복수 선택 가능)", available_parts)
+            
             if selected_parts:
                 st.write("### Step 3. 부위별 세부 타겟 설정")
                 for p in selected_parts:
@@ -442,31 +458,27 @@ else:
                         target_options[p] = st.selectbox(f"[{p}] 세부 타겟", ["가슴 전체", "윗가슴 집중", "아랫가슴 집중"], key="target_가슴")
                     elif p == "등":
                         target_options[p] = st.selectbox(f"[{p}] 세부 타겟", ["등 전체", "너비(수직) 집중", "두께(수평) 집중"], key="target_등")
-                    elif p == "하체":
-                        target_options[p] = st.selectbox(f"[{p}] 세부 타겟", ["하체 전체", "전면(사두) 집중", "후면(둔근/햄스트링) 집중"], key="target_하체")
                     elif p == "어깨":
                         target_options[p] = st.selectbox(f"[{p}] 세부 타겟", ["입체감 전체", "측면 집중", "후면 집중"], key="target_어깨")
                     else:
                         target_options[p] = "기본"
+                
+                recommended_list = generate_capped_routine(selected_parts, target_options)
 
         selected_exercises = []
-        if selected_parts:
-            # 부위별 세부 타겟 조합 생성
-            recommended_list = []
-            for p in selected_parts:
-                t_opt = target_options.get(p, "기본")
-                recommended_list.extend(generate_custom_target_exercises(p, t_opt))
-                
-            col_rec1, col_rec2 = st.columns([3, 1])
-            with col_rec1: st.info(f"💡 **[{split_type}]** 선택 맞춤 조합")
-            with col_rec2:
-                if st.button("🎲 재추천"):
-                    st.rerun()
-                    
-            selected_exercises = st.multiselect("종목 구성 (직접 수정 가능)", options=ALL_EXERCISES, default=list(dict.fromkeys(recommended_list)))
+        if recommended_list or split_type == "자율 선택":
+            if recommended_list:
+                col_rec1, col_rec2 = st.columns([3, 1])
+                with col_rec1: st.success(f"🎯 **[추천 조합]** 총 {len(recommended_list)}개 종목으로 볼륨 최적화됨")
+                with col_rec2:
+                    if st.button("🎲 재추천"):
+                        st.rerun()
             
-        elif split_type == "자율 선택":
-            selected_exercises = st.multiselect("종목 선택", options=ALL_EXERCISES)
+            selected_exercises = st.multiselect(
+                "종목 구성 (원하는 대로 자유롭게 추가/삭제 가능)", 
+                options=ALL_EXERCISES, 
+                default=recommended_list if recommended_list else None
+            )
             
         custom_ex = st.text_input("직접 종목 입력 (쉼표 구분)", placeholder="예: 케이블 로우, 스트레칭")
         if custom_ex:
