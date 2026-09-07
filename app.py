@@ -140,7 +140,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 2. DB 초기화
+# 2. DB 초기화 (follows.csv 컬럼에 status 추가)
 def init_db():
     if not os.path.exists(USERS_FILE):
         pd.DataFrame(columns=["user_id", "password", "nickname", "bio", "profile_pic"]).to_csv(USERS_FILE, index=False)
@@ -151,7 +151,13 @@ def init_db():
             users.to_csv(USERS_FILE, index=False)
             
     if not os.path.exists(FOLLOWS_FILE):
-        pd.DataFrame(columns=["follower_id", "following_id"]).to_csv(FOLLOWS_FILE, index=False)
+        pd.DataFrame(columns=["follower_id", "following_id", "status"]).to_csv(FOLLOWS_FILE, index=False)
+    else:
+        follows = pd.read_csv(FOLLOWS_FILE, dtype=str)
+        if "status" not in follows.columns:
+            follows["status"] = "accepted"
+            follows.to_csv(FOLLOWS_FILE, index=False)
+
     if not os.path.exists(WORKOUT_FILE):
         pd.DataFrame(columns=["date", "user_id", "nickname", "routine", "exercise", "set_num", "weight", "reps", "memo", "is_private"]).to_csv(WORKOUT_FILE, index=False)
 
@@ -268,13 +274,11 @@ ANATOMICAL_POOL = {
 
 ALL_EXERCISES = list(set(sum(ANATOMICAL_POOL.values(), [])))
 
-# 볼륨 수치 제한(Capping) 알고리즘 적용 루틴 추천 함수
 def generate_capped_routine(selected_parts, target_options):
     random.seed(time.time())
     num_parts = len(selected_parts)
     recommended = []
     
-    # 선택된 총 부위 수에 따라 부위당 종목 할당량 동적 조절
     for part in selected_parts:
         t_opt = target_options.get(part, "기본")
         
@@ -326,7 +330,6 @@ def generate_capped_routine(selected_parts, target_options):
             count = 2 if num_parts <= 2 else 1
             recommended.extend(random.sample(ANATOMICAL_POOL[part], count))
             
-    # 전체 추천 종목 수가 5개를 넘지 않도록 조정
     return list(dict.fromkeys(recommended))[:5]
 
 if "user_id" not in st.session_state: st.session_state.user_id = None
@@ -430,8 +433,10 @@ else:
     ])
 
     workouts_df = load_workouts()
+    follows_df = load_follows()
+    users_df = load_users()
     
-    # TAB 1: 운동 기록 작성 (볼륨 제한 및 자율 수정 지원)
+    # TAB 1: 운동 기록 작성
     with tab_workout:
         st.subheader("오늘의 운동 세팅")
         today_date = st.date_input("운동 날짜", datetime.now())
@@ -588,12 +593,17 @@ else:
                 timer_box.markdown("<h1 style='text-align: center; color: #4ADE80; font-size: 1.8rem; font-weight: 700;'>🔥 휴식 끝! 다음 세트 시작!</h1>", unsafe_allow_html=True)
                 st.session_state.timer_running = False
 
-    # TAB 3: 팔로우 피드
+    # TAB 3: 팔로우 피드 (승인된 팔로우만 노출)
     with tab_feed:
         st.subheader("📱 팔로워 피드")
-        follows_df = load_follows()
-        my_followings = follows_df[follows_df["follower_id"] == st.session_state.user_id]["following_id"].tolist()
-        feed_users = set(my_followings + [st.session_state.user_id])
+        
+        # 내가 팔로우하고 '승인(accepted)'을 받은 계정들
+        accepted_followings = follows_df[
+            (follows_df["follower_id"] == st.session_state.user_id) & 
+            (follows_df["status"] == "accepted")
+        ]["following_id"].tolist()
+        
+        feed_users = set(accepted_followings + [st.session_state.user_id])
         
         feed_df = workouts_df[
             (workouts_df["user_id"].isin(feed_users)) & 
@@ -631,14 +641,18 @@ else:
                             st.success("기록이 삭제되었습니다.")
                             st.rerun()
         else:
-            st.info("기록이 없습니다.")
+            st.info("표시할 피드 기록이 없습니다.")
 
-    # TAB 4: 팔로워 출석 달력
+    # TAB 4: 팔로워 출석 달력 (승인된 팔로우만 노출)
     with tab_calendar:
         st.subheader("📅 출석 달력")
-        follows_df = load_follows()
-        my_followings = follows_df[follows_df["follower_id"] == st.session_state.user_id]["following_id"].tolist()
-        feed_users = set(my_followings + [st.session_state.user_id])
+        
+        accepted_followings = follows_df[
+            (follows_df["follower_id"] == st.session_state.user_id) & 
+            (follows_df["status"] == "accepted")
+        ]["following_id"].tolist()
+        
+        feed_users = set(accepted_followings + [st.session_state.user_id])
         
         now = datetime.now()
         year = st.number_input("연도", value=now.year, min_value=2024, max_value=2030)
@@ -662,12 +676,41 @@ else:
         else:
             st.info("표시할 데이터가 없습니다.")
 
-    # TAB 5: 친구 찾기 & 팔로우
+    # TAB 5: 팔로우 승인제 요청/수락 및 친구 찾기
     with tab_friends:
-        st.subheader("👥 팔로우 관리")
-        users_df = load_users()
-        follows_df = load_follows()
+        st.subheader("👥 팔로우 관리 & 요청 승인")
         
+        # 1. 나에게 온 팔로우 요청 관리
+        pending_requests = follows_df[
+            (follows_df["following_id"] == st.session_state.user_id) & 
+            (follows_df["status"] == "pending")
+        ]
+        
+        if not pending_requests.empty:
+            st.warning(f"🔔 **나에게 온 팔로우 요청 ({len(pending_requests)}건)**")
+            for idx, req in pending_requests.iterrows():
+                req_user = users_df[users_df["user_id"] == req["follower_id"]]
+                req_nick = req_user.iloc[0]["nickname"] if not req_user.empty else req["follower_id"]
+                
+                col_req1, col_req2, col_req3 = st.columns([3, 1, 1])
+                with col_req1:
+                    st.write(f"• **{req_nick}** (`{req['follower_id']}`) 님이 팔로우를 요청했습니다.")
+                with col_req2:
+                    if st.button("수락", key=f"acc_{idx}"):
+                        follows_df.loc[idx, "status"] = "accepted"
+                        save_data(follows_df, FOLLOWS_FILE)
+                        st.success(f"{req_nick}님의 요청을 수락했습니다.")
+                        st.rerun()
+                with col_req3:
+                    if st.button("거절", key=f"rej_{idx}"):
+                        follows_df = follows_df.drop(idx)
+                        save_data(follows_df, FOLLOWS_FILE)
+                        st.info("요청을 거절했습니다.")
+                        st.rerun()
+            st.divider()
+
+        # 2. 친구 닉네임 검색 및 팔로우 요청 보내기
+        st.write("### 🔍 친구 검색 및 팔로우")
         search_nick = st.text_input("닉네임 검색", placeholder="친구 닉네임").strip()
         if search_nick:
             target_user = users_df[users_df["nickname"] == search_nick]
@@ -680,39 +723,59 @@ else:
                     st.warning("자기 자신은 팔로우할 수 없습니다.")
                 else:
                     st.write(f"**{t_nick}** ({t_bio if pd.notna(t_bio) else '소개 없음'})")
-                    is_following = not follows_df[
+                    
+                    # 현재 팔로우 상태 체크
+                    f_match = follows_df[
                         (follows_df["follower_id"] == st.session_state.user_id) & 
                         (follows_df["following_id"] == t_id)
-                    ].empty
+                    ]
                     
-                    if is_following:
-                        if st.button("언팔로우"):
-                            follows_df = follows_df[~(
-                                (follows_df["follower_id"] == st.session_state.user_id) & 
-                                (follows_df["following_id"] == t_id)
-                            )]
-                            save_data(follows_df, FOLLOWS_FILE)
-                            st.success(f"{t_nick}님을 언팔로우했습니다.")
-                            st.rerun()
+                    if not f_match.empty:
+                        curr_status = f_match.iloc[0]["status"]
+                        if curr_status == "pending":
+                            st.info("⏳ 수락 대기 중인 상태입니다.")
+                            if st.button("팔로우 요청 취소"):
+                                follows_df = follows_df[~(
+                                    (follows_df["follower_id"] == st.session_state.user_id) & 
+                                    (follows_df["following_id"] == t_id)
+                                )]
+                                save_data(follows_df, FOLLOWS_FILE)
+                                st.rerun()
+                        elif curr_status == "accepted":
+                            if st.button("언팔로우"):
+                                follows_df = follows_df[~(
+                                    (follows_df["follower_id"] == st.session_state.user_id) & 
+                                    (follows_df["following_id"] == t_id)
+                                )]
+                                save_data(follows_df, FOLLOWS_FILE)
+                                st.success(f"{t_nick}님을 언팔로우했습니다.")
+                                st.rerun()
                     else:
-                        if st.button("팔로우하기"):
-                            new_follow = pd.DataFrame([{"follower_id": st.session_state.user_id, "following_id": t_id}])
+                        if st.button("팔로우 요청하기"):
+                            new_follow = pd.DataFrame([{
+                                "follower_id": st.session_state.user_id, 
+                                "following_id": t_id,
+                                "status": "pending"
+                            }])
                             follows_df = pd.concat([follows_df, new_follow], ignore_index=True)
                             save_data(follows_df, FOLLOWS_FILE)
-                            st.success(f"{t_nick}님을 팔로우합니다!")
+                            st.success(f"{t_nick}님에게 팔로우 요청을 보냈습니다!")
                             st.rerun()
             else:
                 st.error("유저를 찾을 수 없습니다.")
 
         st.divider()
-        st.write("### 내 팔로우 목록")
-        my_follows = follows_df[follows_df["follower_id"] == st.session_state.user_id]
+        st.write("### 내 팔로잉 목록 (승인 완료)")
+        my_follows = follows_df[
+            (follows_df["follower_id"] == st.session_state.user_id) & 
+            (follows_df["status"] == "accepted")
+        ]
         if not my_follows.empty:
             followed_users = users_df[users_df["user_id"].isin(my_follows["following_id"])]
             for _, f_row in followed_users.iterrows():
                 st.write(f"• **{f_row['nickname']}** (`{f_row['user_id']}`)")
         else:
-            st.caption("팔로우 중인 친구가 없습니다.")
+            st.caption("팔로우 승인된 친구가 없습니다.")
 
     # TAB 6: 프로필 관리 & 리포트
     with tab_profile:
