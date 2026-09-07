@@ -20,7 +20,7 @@ if not os.path.exists(PROFILE_DIR):
 
 APP_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
 
-# 모바일 대응 커스텀 CSS
+# 라디오 버튼 기반 100% 균등 분할 커스텀 CSS
 st.markdown(f"""
 <head>
     <link rel="apple-touch-icon" href="{APP_ICON_URL}">
@@ -48,40 +48,56 @@ st.markdown(f"""
         font-size: 0.85rem;
         color: #64748B;
         text-align: center;
-        margin-bottom: 1.8rem;
+        margin-bottom: 1.5rem;
     }}
 
-    /* 탭 메뉴 균등 분할 레이아웃 */
-    div[data-baseweb="tab-list"] {{
+    /* Radio 버튼을 가로 100% 균등 세그먼트 메뉴로 커스텀 */
+    div[data-testid="stRadio"] > div {{
         display: flex !important;
+        flex-direction: row !important;
         width: 100% !important;
         background-color: #14161D !important;
         border-radius: 12px !important;
         padding: 4px !important;
-        gap: 2px !important;
+        gap: 4px !important;
         border: 1px solid #222634 !important;
-        margin-bottom: 1.2rem !important;
+        margin-bottom: 1.5rem !important;
     }}
 
-    button[data-baseweb="tab"] {{
+    div[data-testid="stRadio"] label {{
         flex: 1 1 0% !important;
         width: 100% !important;
         text-align: center !important;
         justify-content: center !important;
+        background: transparent !important;
         border-radius: 8px !important;
         padding: 10px 0px !important;
-        font-size: 0.82rem !important;
-        font-weight: 700 !important;
-        color: #64748B !important;
-        border: none !important;
-        background: transparent !important;
+        margin: 0 !important;
+        cursor: pointer !important;
         transition: all 0.2s ease-in-out !important;
+        border: none !important;
     }}
 
-    button[aria-selected="true"] {{
+    /* 라디오 원형 버튼 제거 및 텍스트만 중앙 정렬 */
+    div[data-testid="stRadio"] label > div:first-child {{
+        display: none !important;
+    }}
+
+    div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {{
+        font-size: 0.85rem !important;
+        font-weight: 700 !important;
+        color: #64748B !important;
+        margin: 0 !important;
+    }}
+
+    /* 선택된 탭 스타일링 */
+    div[data-testid="stRadio"] label[data-checked="true"] {{
         background: #1E293B !important;
-        color: #38BDF8 !important;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+    }}
+
+    div[data-testid="stRadio"] label[data-checked="true"] div[data-testid="stMarkdownContainer"] p {{
+        color: #38BDF8 !important;
     }}
 
     .stButton > button {{
@@ -115,7 +131,7 @@ st.markdown(f"""
     @media (max-width: 640px) {{
         .block-container {{ padding-left: 0.5rem !important; padding-right: 0.5rem !important; padding-top: 0.6rem !important; }}
         .brand-title {{ font-size: 1.6rem; }}
-        button[data-baseweb="tab"] {{ font-size: 0.72rem !important; padding: 8px 0px !important; }}
+        div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {{ font-size: 0.75rem !important; }}
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -158,23 +174,53 @@ def get_profile_path(user_id):
     return None
 
 EXERCISE_TIPS = {
-    "벤치프레스": "견갑(날개뼈)을 고정하고 바벨을 가슴 명치 살짝 위에 밀착시킵니다.",
-    "인클라인 벤치프레스": "벤치 각도를 30도 정도로 맞춰 윗가슴 자극에 집중합니다.",
-    "덤벨 벤치프레스": "가슴 근육을 최대한 이완하며 가동범위를 길게 가져갑니다.",
-    "체스트 프레스 머신": "의자 높이를 조절해 손잡이가 가슴 중앙에 오도록 합니다.",
-    "펙덱 플라이 머신": "팔꿈치를 살짝 구부린 상태를 유지하고 가슴을 모아줍니다.",
-    "딥스": "상체를 앞으로 살짝 숙여 가슴 하부 및 삼두 자극을 극대화합니다.",
-    "데드리프트": "허리가 굽지 않도록 척추 중립을 지키고 바벨을 몸에 붙여 올립니다.",
-    "바벨로우": "상체를 45도 숙이고 바벨을 배꼽 방향으로 당겨 등 하부를 자극합니다.",
-    "렛풀다운": "가슴을 열어주고 바를 쇄골 방향으로 당겨 등에 자극을 줍니다.",
-    "시티드 케이블 로우": "상체가 뒤로 과도하게 젖혀지지 않도록 등 힘으로 당깁니다.",
-    "스쿼트": "무릎이 고관절과 함께 접히며 복압을 유지하고 내려갑니다.",
-    "레그프레스": "무릎을 완전히 펴지 말고 관절 부담을 줄입니다.",
-    "오버헤드 프레스": "복근과 엉덩이에 힘을 주고 바벨을 머리 위 직선으로 밀어 올립니다.",
-    "사이드 레터럴 레이즈": "손목이 아닌 팔꿈치를 들어 올려 측면 어깨를 사용합니다.",
-    "트라이셉스 케이블 푸쉬다운": "팔꿈치를 옆구리에 고정하고 아래로 밀어 삼두를 삼각 압축합니다.",
-    "라잉 트라이셉스 익스텐션": "팔꿈치를 고정하고 이마 수직 방향으로 바를 내렸다 밀어 올립니다.",
-    "바벨 컬": "상체 반동을 줄이고 팔꿈치를 고정한 채 이두의 힘으로 끌어올립니다."
+    "벤치프레스": "견갑(날개뼈)을 패킹 후 가슴을 열고, 바벨을 쇄골이 아닌 명치 밑으로 내립니다.",
+    "인클라인 벤치프레스": "벤치 각도를 30도로 맞추고, 바벨을 쇄골 살짝 아래 윗가슴 라인으로 이완시킵니다.",
+    "덤벨 벤치프레스": "수축 시 덤벨을 부딪치지 말고, 이완 시 팔꿈치 각도를 75도로 유지하며 최대한 늘립니다.",
+    "인클라인 덤벨 벤치프레스": "상체 각도를 세우고 덤벨을 윗가슴 바깥쪽까지 수평 이완 후 수직으로 밀어올립니다.",
+    "체스트 프레스 머신": "등패드에 엉덩이와 어깨를 고정하고 손잡이가 가슴 중앙 수평선에 오도록 의자를 조절합니다.",
+    "펙덱 플라이 머신": "팔꿈치를 살짝 구부려 고정하고, 손이 아닌 팔꿈치 안쪽으로 가슴을 쥐어짜듯 모읍니다.",
+    "케이블 크로스오버": "상체를 살짝 숙이고 케이블 손잡이를 명치/아랫가슴 방향으로 둥글게 모아줍니다.",
+    "딥스": "상체를 앞으로 30도 숙여 체중을 가슴 하부에 싣고, 팔꿈치가 90도가 될 때까지 내립니다.",
+    "덤벨 플라이": "팔꿈치 각도를 변형하지 말고 포옹하듯 곡선을 그리며 가슴 외곽을 신장시킵니다.",
+    "데드리프트": "바벨을 신발끈 중앙 위에 두고, 바를 다리에 붙인 채 고관절(힙힌지)을 접어 들어올립니다.",
+    "바벨로우": "상체를 45도 숙이고 복압을 잡은 뒤 바벨을 허벅지 타고 배꼽 방향으로 당깁니다.",
+    "풀업": "숄더패킹으로 견갑을 먼저 내린 뒤 가슴을 봉에 맞닿는다는 느낌으로 광배근을 당깁니다.",
+    "티바로우": "허리가 꺾이지 않도록 복압을 단단히 유지하고 팔꿈치를 명치 뒤쪽으로 찍어누르듯 당깁니다.",
+    "렛풀다운": "상체를 살짝 뒤로 누르고 바를 쇄골 쪽으로 당기며 이완 시 광배가 뽑혀나가는 느낌을 유지합니다.",
+    "시티드 케이블 로우": "상체 반동을 최소화하고 명치를 열면서 케이블을 아랫배 쪽으로 밀착 당깁니다.",
+    "원암 덤벨로우": "골반과 척추 수평을 유지하고 팔꿈치를 골반 쪽으로 그리는 궤적으로 당깁니다.",
+    "어시스트 풀업 머신": "무릎을 패드에 밀착하고 상체 우측/좌측 균형을 맞춰 광배 하부까지 이완시킵니다.",
+    "암 풀다운": "팔꿈치를 살짝 구부려 고정하고 바를 허벅지 방향으로 호를 그리며 짓눌러 내려줍니다.",
+    "스쿼트": "발바닥 전체로 지면을 지탱하고 무릎과 고관절이 동시에 접히며 척추 중립을 유지합니다.",
+    "레그프레스": "발판 상단에 발을 두고 무릎이 안쪽으로 모이지 않게 하며 허리가 패드에서 뜨지 않게 내립니다.",
+    "스티프 레그 데드리프트": "무릎을 살짝 구부린 상태로 고정하고 엉덩이를 뒤로 빼며 대퇴이두(햄스트링)를 늘립니다.",
+    "레그 익스텐션": "엉덩이가 들리지 않게 손잡이를 강하게 잡고 발목을 당긴 상태에서 대퇴사두를 완전히 쥐어짭니다.",
+    "레그 컬": "골반을 패드에 밀착시키고 발목을 세워 햄스트링 힘으로 패드를 엉덩이 쪽으로 접어올립니다.",
+    "런지": "앞발 뒤꿈치에 체중의 70%를 싣고 무릎이 발끝을 과도하게 넘지 않게 직각으로 내립니다.",
+    "이너사이 머신": "내전근(허벅지 안쪽)을 장력 유지 상태로 이완 후 튕기지 않고 지긋이 모아줍니다.",
+    "아웃사이 머신": "상체를 살짝 숙여 둔근(엉덩이)에 자극을 집중시키고 무릎 외각으로 패드를 밀어냅니다.",
+    "카프 레이즈": "가동범위를 최대한 사용하여 뒤꿈치를 끝까지 올렸다가 가자미근/비복근을 최대로 늘립니다.",
+    "오버헤드 프레스": "코어와 둔근에 수축을 유지하고 바벨을 턱을 스치며 머리 위 직수평으로 밀어 올립니다.",
+    "덤벨 숄더프레스": "덤벨이 팔꿈치 수직 선상에서 벗어나지 않게 유지하며 귀 높이까지 내렸다 올립니다.",
+    "숄더프레스 머신": "등받이에 허리를 밀착하고 팔꿈치가 몸 뒤로 빠지지 않도록 유의하며 밀어줍니다.",
+    "사이드 레터럴 레이즈": "덤벨을 쥐는 힘을 빼고 팔꿈치를 측면으로 들어 올린다는 느낌으로 차올립니다.",
+    "벤트오버 레터럴 레이즈": "상체를 90도 숙이고 후면 삼각근의 힘으로 새끼손가락 방향을 위로 들며 넓게 벌립니다.",
+    "페이스풀": "케이블을 눈높이에 맞추고 로프를 이마/눈썹 방향으로 당기며 팔꿈치를 외회전시킵니다.",
+    "아놀드 프레스": "손바닥이 자신을 향한 상태에서 회전시키며 올려 전면과 측면 삼각근을 동시에 타격합니다.",
+    "트라이셉스 케이블 푸쉬다운": "팔꿈치를 옆구리에 박아두고 바/로프를 바닥 방향으로 삼두를 완전 압축시킵니다.",
+    "라잉 트라이셉스 익스텐션": "팔꿈치를 수직보다 살짝 뒤로 기울여 고정하고 바를 정수리 뒤쪽으로 내립니다.",
+    "딥스(삼두)": "상체를 수직으로 세운 상태를 유지하여 중량이 가슴이 아닌 삼두근에 쏠리게 합니다.",
+    "바벨 컬": "팔꿈치가 앞으로 튀어나가지 않게 고정하고 이두의 힘만으로 바벨을 호를 그리며 올립니다.",
+    "덤벨 컬": "손목을 밖으로 수피네이션(회전)시키며 이두근의 정점 수축을 극대화합니다.",
+    "해머 컬": "손바닥이 서로 마주 보게 유지하여 상완근과 상완요골근(전완근)을 집중 타격합니다.",
+    "프리처 컬": "패드에 삼두를 완전히 밀착시켜 반동을 차단하고 이두의 이완을 최대로 끌어냅니다.",
+    "크런치": "허리를 바닥에 붙인 채 상복부만 말아 올려 갈비뼈와 골반이 가까워지게 만듭니다.",
+    "레그 레이즈": "요추(허리)가 바닥에서 뜨지 않도록 복압을 유지하며 하복부 힘으로 다리를 들어 올립니다.",
+    "플랭크": "어깨 아래 팔꿈치를 두고 머리부터 발끝까지 일직선을 만들어 코어 전체에 장력을 줍니다.",
+    "천국의 계단(스텝밀)": "발바닥 전체로 계단을 딛고 발 뒤꿈치를 밀어내며 둔근 자극을 살립니다.",
+    "런닝머신": "상체를 똑바로 세우고 호흡을 일정하게 유지하며 가벼운 경사도를 주어 관절 부담을 줄입니다.",
+    "사이클": "페달이 가장 아래로 내려갔을 때 무릎이 살짝 구부러지도록 안장 높이를 조절합니다."
 }
 
 def get_yt_url(exercise_name):
@@ -306,14 +352,18 @@ else:
         
     st.markdown("<div class='brand-title' style='margin-top:0; font-size:1.6rem;'>WORKOUT ⚡</div>", unsafe_allow_html=True)
     
-    tab_workout, tab_timer, tab_feed, tab_calendar, tab_friends, tab_profile = st.tabs([
-        "기록", "타이머", "피드", "달력", "팔로우", "프로필"
-    ])
+    # 100% 가로 분할 보장 세그먼트 컨트롤 메뉴
+    selected_tab = st.radio(
+        "", 
+        ["기록", "타이머", "피드", "달력", "팔로우", "프로필"], 
+        index=0, 
+        label_visibility="collapsed"
+    )
     
     workouts_df = load_workouts()
     
-    # TAB 1: 운동 기록 작성 (엔터키 자동 저장 방지 적용)
-    with tab_workout:
+    # TAB 1: 운동 기록 작성
+    if selected_tab == "기록":
         st.subheader("오늘의 운동")
         today_date = st.date_input("운동 날짜", datetime.now())
         
@@ -346,12 +396,11 @@ else:
             st.divider()
             my_past_workouts = workouts_df[workouts_df["user_id"] == st.session_state.user_id]
             
-            # 폼을 제거하고 일반 컨테이너 방식으로 변경하여 엔터키 저장 현상 완전 차단
             workout_entries = []
             for ex in selected_exercises:
                 st.write(f"🏋️ **{ex}**")
                 
-                tip_text = EXERCISE_TIPS.get(ex, "자극 부위에 집중하여 바른 자세로 수행합니다.")
+                tip_text = EXERCISE_TIPS.get(ex, "관절 부상을 예방하도록 코어 복압을 유지하고 수축/이완 장력을 지킵니다.")
                 yt_link = get_yt_url(ex)
                 st.markdown(f"""
                 <div class="guide-box">
@@ -408,7 +457,7 @@ else:
                 st.success("성공적으로 저장되었습니다!")
 
     # TAB 2: 휴식 타이머
-    with tab_timer:
+    elif selected_tab == "타이머":
         st.subheader("⏱️ 휴식 타이머")
         
         t_cols = st.columns(4)
@@ -447,8 +496,8 @@ else:
                 timer_box.markdown("<h1 style='text-align: center; color: #4ADE80; font-size: 1.8rem; font-weight: 700;'>🔥 휴식 끝! 다음 세트 시작!</h1>", unsafe_allow_html=True)
                 st.session_state.timer_running = False
 
-    # TAB 3: 팔로우 피드 (기록 삭제 기능 연동)
-    with tab_feed:
+    # TAB 3: 팔로우 피드
+    elif selected_tab == "피드":
         st.subheader("📱 팔로워 피드")
         follows_df = load_follows()
         my_followings = follows_df[follows_df["follower_id"] == st.session_state.user_id]["following_id"].tolist()
@@ -483,7 +532,6 @@ else:
                     if pd.notna(memo_val) and str(memo_val).strip():
                         st.caption(f"💬 {memo_val}")
                         
-                    # 본인 작성 기록 삭제 기능
                     if is_me:
                         if st.button("🗑️ 해당 날짜 기록 삭제", key=f"del_{date}_{uid}"):
                             workouts_df = workouts_df[~((workouts_df["user_id"] == uid) & (workouts_df["date"] == date))]
@@ -494,7 +542,7 @@ else:
             st.info("기록이 없습니다.")
 
     # TAB 4: 팔로워 출석 달력
-    with tab_calendar:
+    elif selected_tab == "달력":
         st.subheader("📅 출석 달력")
         follows_df = load_follows()
         my_followings = follows_df[follows_df["follower_id"] == st.session_state.user_id]["following_id"].tolist()
@@ -523,7 +571,7 @@ else:
             st.info("표시할 데이터가 없습니다.")
 
     # TAB 5: 친구 찾기 & 팔로우
-    with tab_friends:
+    elif selected_tab == "팔로우":
         st.subheader("👥 팔로우 관리")
         users_df = load_users()
         follows_df = load_follows()
@@ -574,8 +622,8 @@ else:
         else:
             st.caption("팔로우 중인 친구가 없습니다.")
 
-    # TAB 6: 프로필 관리 & 기록 삭제/수정 리포트
-    with tab_profile:
+    # TAB 6: 프로필 관리 & 리포트
+    elif selected_tab == "프로필":
         st.subheader("⚙️ 프로필 관리 & 리포트")
         users_df = load_users()
         user_idx = users_df[users_df["user_id"] == st.session_state.user_id].index
