@@ -30,7 +30,6 @@ st.markdown(f"""
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     * {{ font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }}
     
-    /* Streamlit 상단 기본 헤더 요소 숨김 */
     header[data-testid="stHeader"] {{
         display: none !important;
     }}
@@ -40,13 +39,11 @@ st.markdown(f"""
         color: #E2E8F0;
     }}
 
-    /* 모바일 노치 및 안전 구역(Safe Area) 반응형 패딩 */
     .block-container {{
         padding-top: max(3.2rem, env(safe-area-inset-top)) !important;
         padding-bottom: max(2.0rem, env(safe-area-inset-bottom)) !important;
     }}
 
-    /* 네이티브 다크 스플래시 화면 */
     #splash-screen {{
         position: fixed;
         top: 0; left: 0; width: 100vw; height: 100vh;
@@ -247,19 +244,19 @@ def get_yt_url(exercise_name):
     encoded_query = urllib.parse.quote(query)
     return f"https://www.youtube.com/results?search_query={encoded_query}"
 
+# 세분화된 해부학적 운동 풀
 ANATOMICAL_POOL = {
-    "가슴_상부_프레스": ["인클라인 벤치프레스", "인클라인 덤벨 벤치프레스"],
-    "가슴_중하부_프레스": ["벤치프레스", "덤벨 벤치프레스", "체스트 프레스 머신"],
-    "가슴_하부_고립": ["딥스", "케이블 크로스오버"],
-    "가슴_수축_플라이": ["펙덱 플라이 머신", "덤벨 플라이", "인클라인 덤벨 플라이"],
+    "가슴_상부": ["인클라인 벤치프레스", "인클라인 덤벨 벤치프레스", "인클라인 덤벨 플라이"],
+    "가슴_중부": ["벤치프레스", "덤벨 벤치프레스", "체스트 프레스 머신", "펙덱 플라이 머신"],
+    "가슴_하부": ["딥스", "케이블 크로스오버"],
     
-    "등_수직_너비": ["풀업", "렛풀다운", "어시스트 풀업 머신", "암 풀다운"],
-    "등_수평_두께": ["바벨로우", "시티드 케이블 로우", "티바로우", "원암 덤벨로우"],
-    "등_전신_메인": ["데드리프트"],
+    "등_너비": ["풀업", "렛풀다운", "어시스트 풀업 머신", "암 풀다운"],
+    "등_두께": ["바벨로우", "시티드 케이블 로우", "티바로우", "원암 덤벨로우"],
+    "등_메인": ["데드리프트"],
     
-    "하체_전면_스쿼트": ["스쿼트", "레그프레스", "레그 익스텐션"],
-    "하체_후면_둔근": ["스티프 레그 데드리프트", "레그 컬", "런지"],
-    "하체_내외전근": ["이너사이 머신", "아웃사이 머신", "카프 레이즈"],
+    "하체_전면": ["스쿼트", "레그프레스", "레그 익스텐션"],
+    "하체_후면": ["스티프 레그 데드리프트", "레그 컬", "런지"],
+    "하체_내외전": ["이너사이 머신", "아웃사이 머신", "카프 레이즈"],
     
     "어깨_전면": ["오버헤드 프레스", "덤벨 숄더프레스", "숄더프레스 머신", "아놀드 프레스"],
     "어깨_측면": ["사이드 레터럴 레이즈"],
@@ -267,66 +264,56 @@ ANATOMICAL_POOL = {
     
     "삼두": ["트라이셉스 케이블 푸쉬다운", "라잉 트라이셉스 익스텐션", "딥스(삼두)"],
     "이두": ["바벨 컬", "덤벨 컬", "해머 컬", "프리처 컬"],
-    "유산소/복근": ["크런치", "레그 레이즈", "플랭크", "천국의 계단(스텝밀)", "런닝머신", "사이클"]
+    "복근/유산소": ["크런치", "레그 레이즈", "플랭크", "천국의 계단(스텝밀)", "런닝머신", "사이클"]
 }
 
 ALL_EXERCISES = list(set(sum(ANATOMICAL_POOL.values(), [])))
 
-def generate_anatomical_routine(routine_type):
+# 부위별 타겟에 따른 세부 종목 조합 생성기
+def generate_custom_target_exercises(part, target_option):
     random.seed(time.time())
+    res = []
     
-    if routine_type == "가슴 전체 DAY":
-        return [
-            random.choice(ANATOMICAL_POOL["가슴_상부_프레스"]),
-            random.choice(ANATOMICAL_POOL["가슴_중하부_프레스"]),
-            random.choice(ANATOMICAL_POOL["가슴_수축_플라이"]),
-            random.choice(ANATOMICAL_POOL["삼두"])
-        ]
-    elif routine_type == "윗가슴 집중 DAY":
-        return [
-            ANATOMICAL_POOL["가슴_상부_프레스"][0],
-            ANATOMICAL_POOL["가슴_상부_프레스"][1],
-            "인클라인 덤벨 플라이",
-            random.choice(ANATOMICAL_POOL["삼두"])
-        ]
-    elif routine_type == "등 전체 DAY":
-        return [
-            random.choice(ANATOMICAL_POOL["등_수직_너비"]),
-            random.choice(ANATOMICAL_POOL["등_수평_두께"]),
-            random.choice(ANATOMICAL_POOL["등_수직_너비"]),
-            random.choice(ANATOMICAL_POOL["이두"])
-        ]
-    elif routine_type == "등 너비(수직) 집중 DAY":
-        return [
-            "풀업",
-            "렛풀다운",
-            "암 풀다운",
-            random.choice(ANATOMICAL_POOL["등_수평_두께"]),
-            random.choice(ANATOMICAL_POOL["이두"])
-        ]
-    elif routine_type == "등 두께(수평) 집중 DAY":
-        return [
-            "바벨로우",
-            "시티드 케이블 로우",
-            "원암 덤벨로우",
-            random.choice(ANATOMICAL_POOL["등_수직_너비"]),
-            random.choice(ANATOMICAL_POOL["이두"])
-        ]
-    elif routine_type == "하체/복근 DAY":
-        return [
-            random.choice(ANATOMICAL_POOL["하체_전면_스쿼트"]),
-            random.choice(ANATOMICAL_POOL["하체_후면_둔근"]),
-            random.choice(ANATOMICAL_POOL["하체_내외전근"]),
-            random.choice(ANATOMICAL_POOL["유산소/복근"])
-        ]
-    elif routine_type == "어깨 입체감 DAY":
-        return [
-            random.choice(ANATOMICAL_POOL["어깨_전면"]),
-            random.choice(ANATOMICAL_POOL["어깨_측면"]),
-            random.choice(ANATOMICAL_POOL["어깨_후면"]),
-            random.choice([x for x in ANATOMICAL_POOL["유산소/복근"] if "런닝" in x or "계단" in x or "사이클" in x])
-        ]
-    return []
+    if part == "가슴":
+        if target_option == "가슴 전체":
+            res = [random.choice(ANATOMICAL_POOL["가슴_상부"]), random.choice(ANATOMICAL_POOL["가슴_중부"]), random.choice(ANATOMICAL_POOL["가슴_하부"])]
+        elif target_option == "윗가슴 집중":
+            res = [ANATOMICAL_POOL["가슴_상부"][0], ANATOMICAL_POOL["가슴_상부"][1], random.choice(ANATOMICAL_POOL["가슴_중부"])]
+        elif target_option == "아랫가슴 집중":
+            res = ["딥스", "케이블 크로스오버", random.choice(ANATOMICAL_POOL["가슴_중부"])]
+            
+    elif part == "등":
+        if target_option == "등 전체":
+            res = [random.choice(ANATOMICAL_POOL["등_너비"]), random.choice(ANATOMICAL_POOL["등_두께"]), random.choice(ANATOMICAL_POOL["등_너비"])]
+        elif target_option == "너비(수직) 집중":
+            res = ["풀업", "렛풀다운", "암 풀다운"]
+        elif target_option == "두께(수평) 집중":
+            res = ["바벨로우", "시티드 케이블 로우", "원암 덤벨로우"]
+            
+    elif part == "하체":
+        if target_option == "하체 전체":
+            res = [random.choice(ANATOMICAL_POOL["하체_전면"]), random.choice(ANATOMICAL_POOL["하체_후면"]), random.choice(ANATOMICAL_POOL["하체_내외전"])]
+        elif target_option == "전면(사두) 집중":
+            res = ["스쿼트", "레그프레스", "레그 익스텐션"]
+        elif target_option == "후면(둔근/햄스트링) 집중":
+            res = ["스티프 레그 데드리프트", "레그 컬", "런지"]
+            
+    elif part == "어깨":
+        if target_option == "입체감 전체":
+            res = [random.choice(ANATOMICAL_POOL["어깨_전면"]), random.choice(ANATOMICAL_POOL["어깨_측면"]), random.choice(ANATOMICAL_POOL["어깨_후면"])]
+        elif target_option == "측면 집중":
+            res = [random.choice(ANATOMICAL_POOL["어깨_측면"]), random.choice(ANATOMICAL_POOL["어깨_전면"]), "사이드 레터럴 레이즈"]
+        elif target_option == "후면 집중":
+            res = ["벤트오버 레터럴 레이즈", "페이스풀", random.choice(ANATOMICAL_POOL["어깨_전면"])]
+            
+    elif part == "이두":
+        res = random.sample(ANATOMICAL_POOL["이두"], 2)
+    elif part == "삼두":
+        res = random.sample(ANATOMICAL_POOL["삼두"], 2)
+    elif part == "복근/유산소":
+        res = random.sample(ANATOMICAL_POOL["복근/유산소"], 2)
+        
+    return res
 
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "nickname" not in st.session_state: st.session_state.nickname = None
@@ -430,35 +417,55 @@ else:
 
     workouts_df = load_workouts()
     
-    # TAB 1: 운동 기록 작성
+    # TAB 1: 운동 기록 작성 (단계별 자유 커스텀 루틴 시스템)
     with tab_workout:
-        st.subheader("오늘의 운동")
+        st.subheader("오늘의 운동 세팅")
         today_date = st.date_input("운동 날짜", datetime.now())
         
-        routine_options = [
-            "선택 안함", 
-            "가슴 전체 DAY", "윗가슴 집중 DAY", 
-            "등 전체 DAY", "등 너비(수직) 집중 DAY", "등 두께(수평) 집중 DAY", 
-            "하체/복근 DAY", "어깨 입체감 DAY", "자율 운동"
-        ]
-        routine_type = st.selectbox("루틴 및 타겟 선택", routine_options)
+        # Step 1: 분할 체계 선택
+        split_type = st.selectbox("Step 1. 분할 체계 선택", ["선택 안함", "무분할 (전신)", "2분할", "3분할", "4분할 이상", "자율 선택"])
         
+        selected_parts = []
+        target_options = {}
+        
+        if split_type != "선택 안함" and split_type != "자율 선택":
+            # Step 2: 당일 수행할 메인 부위 선택 (다중 선택 가능)
+            st.write("### Step 2. 오늘 수행할 부위 선택")
+            available_parts = ["가슴", "등", "하체", "어깨", "이두", "삼두", "복근/유산소"]
+            selected_parts = st.multiselect("수행 부위 (복수 선택 가능)", available_parts)
+            
+            # Step 3: 선택한 부위별 세부 타겟 지정
+            if selected_parts:
+                st.write("### Step 3. 부위별 세부 타겟 설정")
+                for p in selected_parts:
+                    if p == "가슴":
+                        target_options[p] = st.selectbox(f"[{p}] 세부 타겟", ["가슴 전체", "윗가슴 집중", "아랫가슴 집중"], key="target_가슴")
+                    elif p == "등":
+                        target_options[p] = st.selectbox(f"[{p}] 세부 타겟", ["등 전체", "너비(수직) 집중", "두께(수평) 집중"], key="target_등")
+                    elif p == "하체":
+                        target_options[p] = st.selectbox(f"[{p}] 세부 타겟", ["하체 전체", "전면(사두) 집중", "후면(둔근/햄스트링) 집중"], key="target_하체")
+                    elif p == "어깨":
+                        target_options[p] = st.selectbox(f"[{p}] 세부 타겟", ["입체감 전체", "측면 집중", "후면 집중"], key="target_어깨")
+                    else:
+                        target_options[p] = "기본"
+
         selected_exercises = []
-        if routine_type != "선택 안함" and routine_type != "자율 운동":
-            if "random_routine" not in st.session_state or st.session_state.get("current_routine_type") != routine_type:
-                st.session_state.random_routine = generate_anatomical_routine(routine_type)
-                st.session_state.current_routine_type = routine_type
+        if selected_parts:
+            # 부위별 세부 타겟 조합 생성
+            recommended_list = []
+            for p in selected_parts:
+                t_opt = target_options.get(p, "기본")
+                recommended_list.extend(generate_custom_target_exercises(p, t_opt))
                 
             col_rec1, col_rec2 = st.columns([3, 1])
-            with col_rec1: st.info(f"💡 **[{routine_type}]** 해부학적 유기적 추천 조합")
+            with col_rec1: st.info(f"💡 **[{split_type}]** 선택 맞춤 조합")
             with col_rec2:
                 if st.button("🎲 재추천"):
-                    st.session_state.random_routine = generate_anatomical_routine(routine_type)
                     st.rerun()
                     
-            selected_exercises = st.multiselect("종목 구성", options=ALL_EXERCISES, default=st.session_state.random_routine)
+            selected_exercises = st.multiselect("종목 구성 (직접 수정 가능)", options=ALL_EXERCISES, default=list(dict.fromkeys(recommended_list)))
             
-        elif routine_type == "자율 운동":
+        elif split_type == "자율 선택":
             selected_exercises = st.multiselect("종목 선택", options=ALL_EXERCISES)
             
         custom_ex = st.text_input("직접 종목 입력 (쉼표 구분)", placeholder="예: 케이블 로우, 스트레칭")
@@ -508,7 +515,7 @@ else:
                         "date": str(today_date),
                         "user_id": st.session_state.user_id,
                         "nickname": st.session_state.nickname,
-                        "routine": routine_type,
+                        "routine": f"{split_type} ({', '.join(selected_parts)})",
                         "exercise": ex,
                         "set_num": s,
                         "weight": w,
