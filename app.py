@@ -5,8 +5,6 @@ import time
 import random
 from datetime import datetime
 import urllib.parse
-from PIL import Image, ImageOps
-import base64
 
 # 1. 페이지 기본 설정
 st.set_page_config(page_title="WORKOUT", page_icon="⚡", layout="centered", initial_sidebar_state="collapsed")
@@ -14,14 +12,11 @@ st.set_page_config(page_title="WORKOUT", page_icon="⚡", layout="centered", ini
 USERS_FILE = "users.csv"
 FOLLOWS_FILE = "follows.csv"
 WORKOUT_FILE = "workout_data.csv"
-PROFILE_DIR = "profile_pics"
-
-if not os.path.exists(PROFILE_DIR):
-    os.makedirs(PROFILE_DIR)
 
 APP_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
+AVATAR_OPTIONS = ["🦁 사자", "🐯 호랑이", "🐻 곰", "🐺 늑대", "🦅 독수리", "🦈 상어", "🦍 고릴라", "⚡ 번개"]
 
-# 모바일 대응 및 프로필 UI CSS
+# 모바일 대응 및 이모지 프로필 CSS
 st.markdown(f"""
 <head>
     <link rel="apple-touch-icon" href="{APP_ICON_URL}">
@@ -94,21 +89,16 @@ st.markdown(f"""
         margin-bottom: 0.2rem;
     }}
 
-    /* 프로필 원형 아바타 규격 */
-    .profile-avatar {{
-        width: 60px;
-        height: 60px;
+    .avatar-badge {{
+        font-size: 2.2rem;
+        background: rgba(56, 189, 248, 0.1);
+        border: 1px solid rgba(56, 189, 248, 0.3);
         border-radius: 50%;
-        object-fit: cover;
-        border: 2px solid #38BDF8;
-        box-shadow: 0 2px 8px rgba(56, 189, 248, 0.25);
-    }}
-    .profile-avatar-small {{
-        width: 42px;
-        height: 42px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 1.5px solid #38BDF8;
+        width: 55px;
+        height: 55px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }}
 
     h1 {{ font-size: 1.6rem !important; }}
@@ -170,11 +160,11 @@ st.markdown(f"""
 # DB 초기화
 def init_db():
     if not os.path.exists(USERS_FILE):
-        pd.DataFrame(columns=["user_id", "password", "nickname", "bio", "profile_pic"]).to_csv(USERS_FILE, index=False)
+        pd.DataFrame(columns=["user_id", "password", "nickname", "bio", "avatar"]).to_csv(USERS_FILE, index=False)
     else:
         users = pd.read_csv(USERS_FILE, dtype=str)
-        if "profile_pic" not in users.columns:
-            users["profile_pic"] = ""
+        if "avatar" not in users.columns:
+            users["avatar"] = "🦁 사자"
             users.to_csv(USERS_FILE, index=False)
             
     if not os.path.exists(FOLLOWS_FILE):
@@ -202,27 +192,12 @@ def load_workouts():
 
 def save_data(df, filename): df.to_csv(filename, index=False)
 
-def save_profile_image(uploaded_file, filename):
-    img = Image.open(uploaded_file)
-    try:
-        img = ImageOps.exif_transpose(img)
-    except Exception:
-        pass
-    img.save(os.path.join(PROFILE_DIR, filename))
-
-def get_profile_path(user_id):
+def get_user_avatar(user_id):
     users = load_users()
     u = users[users["user_id"] == user_id]
-    if not u.empty and pd.notna(u.iloc[0].get("profile_pic")) and str(u.iloc[0]["profile_pic"]).strip():
-        pic_file = os.path.join(PROFILE_DIR, u.iloc[0]["profile_pic"])
-        if os.path.exists(pic_file): return pic_file
-    return None
-
-def get_profile_base64(pic_path):
-    if pic_path and os.path.exists(pic_path):
-        with open(pic_path, "rb") as f:
-            return base64.b64encode(f.read()).decode()
-    return None
+    if not u.empty and pd.notna(u.iloc[0].get("avatar")):
+        return str(u.iloc[0]["avatar"]).split()[0] # 이모지만 추출
+    return "🦁"
 
 EXERCISE_TIPS = {
     # 가슴
@@ -373,24 +348,6 @@ def generate_capped_routine(selected_parts, target_options):
             
     return list(dict.fromkeys(recommended))[:5]
 
-# 프로필 모달 확대 다이얼로그 함수
-def open_profile_modal(user_id, nick):
-    users = load_users()
-    u = users[users["user_id"] == user_id]
-    bio = u.iloc[0].get("bio", "") if not u.empty else ""
-    pic_path = get_profile_path(user_id)
-    
-    @st.dialog(f"👤 {nick} 님의 프로필")
-    def _dialog():
-        if pic_path and os.path.exists(pic_path):
-            st.image(pic_path, use_column_width=True)
-        else:
-            st.info("등록된 프로필 사진이 없습니다.")
-        if pd.notna(bio) and str(bio).strip():
-            st.write(f"💬 **한 줄 소개:** {bio}")
-        st.caption(f"ID: {user_id}")
-    _dialog()
-
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "nickname" not in st.session_state: st.session_state.nickname = None
 if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
@@ -433,7 +390,7 @@ if st.session_state.user_id is None:
             new_pw = st.text_input("비밀번호", type="password", key="s_pw").strip()
             new_nick = st.text_input("닉네임", key="s_nick").strip()
             new_bio = st.text_input("한 줄 소개 (선택)", key="s_bio", placeholder="목표나 다짐").strip()
-            uploaded_pic = st.file_uploader("프로필 사진 선택 (앨범)", type=["jpg", "jpeg", "png"])
+            selected_avatar = st.selectbox("프로필 동물 이모지 선택", AVATAR_OPTIONS)
             
             submit_signup = st.form_submit_button("가입 완료")
             
@@ -445,15 +402,10 @@ if st.session_state.user_id is None:
                 elif new_nick in users_df["nickname"].values:
                     st.error("이미 사용 중인 닉네임입니다.")
                 else:
-                    pic_filename = ""
-                    if uploaded_pic is not None:
-                        pic_filename = f"{new_id}_{int(time.time())}.png"
-                        save_profile_image(uploaded_pic, pic_filename)
-                        
                     new_user = pd.DataFrame([{
                         "user_id": new_id, "password": new_pw, 
                         "nickname": new_nick, "bio": new_bio, 
-                        "profile_pic": pic_filename
+                        "avatar": selected_avatar
                     }])
                     users_df = pd.concat([users_df, new_user], ignore_index=True)
                     save_data(users_df, USERS_FILE)
@@ -467,18 +419,11 @@ if st.session_state.user_id is None:
 
 else:
     # --- [로그인 완료 메인 화면 헤더] ---
-    prof_path = get_profile_path(st.session_state.user_id)
-    prof_b64 = get_profile_base64(prof_path)
+    my_avatar = get_user_avatar(st.session_state.user_id)
     
-    col_h1, col_h2 = st.columns([1.2, 3.8])
+    col_h1, col_h2 = st.columns([1, 4])
     with col_h1:
-        if prof_b64:
-            # 내 프로필 아바타 클릭 시 팝업 열기 버튼과 일체화
-            if st.button("🖼️", key="btn_my_avatar_modal"):
-                open_profile_modal(st.session_state.user_id, st.session_state.nickname)
-            st.markdown(f'<img src="data:image/png;base64,{prof_b64}" class="profile-avatar" style="margin-top:-38px; pointer-events:none;">', unsafe_allow_html=True)
-        else:
-            st.write("👤")
+        st.markdown(f'<div class="avatar-badge">{my_avatar}</div>', unsafe_allow_html=True)
             
     with col_h2:
         st.markdown(f"**{st.session_state.nickname}**")
@@ -655,7 +600,7 @@ else:
                 timer_box.markdown("<h2 style='text-align: center; color: #4ADE80;'>🔥 휴식 끝! 다음 세트 시작!</h2>", unsafe_allow_html=True)
                 st.session_state.timer_running = False
 
-    # TAB 3: 팔로우 피드 (상대방 프로필 사진 클릭 시 팝업 확대)
+    # TAB 3: 팔로우 피드
     with tab_feed:
         st.markdown("### 📱 팔로워 피드")
         
@@ -676,22 +621,9 @@ else:
             for (date, nick, routine, uid), group in sorted(grouped, key=lambda x: x[0][0], reverse=True):
                 is_me = (uid == st.session_state.user_id)
                 card_title = f"💪 {nick} ({date})" if not is_me else f"💪 나 ({date})"
+                u_avatar = get_user_avatar(uid)
                 
-                with st.expander(f"{card_title} - [{routine}]", expanded=True):
-                    f_pic = get_profile_path(uid)
-                    f_b64 = get_profile_base64(f_pic)
-                    
-                    col_p1, col_p2 = st.columns([1, 4])
-                    with col_p1:
-                        if f_b64:
-                            if st.button("🖼️", key=f"btn_feed_avatar_{uid}_{date}"):
-                                open_profile_modal(uid, nick)
-                            st.markdown(f'<img src="data:image/png;base64,{f_b64}" class="profile-avatar-small" style="margin-top:-38px; pointer-events:none;">', unsafe_allow_html=True)
-                        else:
-                            st.write("👤")
-                    with col_p2:
-                        st.write(f"**{nick}**")
-                        
+                with st.expander(f"{u_avatar} {card_title} - [{routine}]", expanded=True):
                     total_vol = (group["weight"] * group["reps"]).sum()
                     st.write(f"**총 볼륨:** `{total_vol:,.0f} kg`")
                     
@@ -747,7 +679,7 @@ else:
         else:
             st.info("표시할 데이터가 없습니다.")
 
-    # TAB 5: 팔로우 관리 (프로필 클릭 팝업 탑재)
+    # TAB 5: 팔로우 관리
     with tab_friends:
         st.markdown("### 👥 팔로우 관리")
         
@@ -761,10 +693,11 @@ else:
             for idx, req in pending_requests.iterrows():
                 req_user = users_df[users_df["user_id"] == req["follower_id"]]
                 req_nick = req_user.iloc[0]["nickname"] if not req_user.empty else req["follower_id"]
+                req_avatar = get_user_avatar(req["follower_id"])
                 
                 col_req1, col_req2, col_req3 = st.columns([3, 1, 1])
                 with col_req1:
-                    st.write(f"• **{req_nick}** 님의 요청")
+                    st.write(f"• {req_avatar} **{req_nick}** 님의 요청")
                 with col_req2:
                     if st.button("수락", key=f"acc_{idx}"):
                         follows_df.loc[idx, "status"] = "accepted"
@@ -787,18 +720,14 @@ else:
                 t_id = target_user.iloc[0]["user_id"]
                 t_nick = target_user.iloc[0]["nickname"]
                 t_bio = target_user.iloc[0]["bio"]
+                t_avatar = get_user_avatar(t_id)
                 
                 if t_id == st.session_state.user_id:
                     st.warning("본인 계정입니다.")
                 else:
-                    t_pic = get_profile_path(t_id)
-                    t_b64 = get_profile_base64(t_pic)
-                    if t_b64:
-                        if st.button("🖼️", key=f"btn_search_avatar_{t_id}"):
-                            open_profile_modal(t_id, t_nick)
-                        st.markdown(f'<img src="data:image/png;base64,{t_b64}" class="profile-avatar-small" style="margin-top:-38px; pointer-events:none;">', unsafe_allow_html=True)
-                            
-                    st.write(f"**{t_nick}** ({t_bio if pd.notna(t_bio) else '소개 없음'})")
+                    st.write(f"### {t_avatar} **{t_nick}**")
+                    if pd.notna(t_bio) and str(t_bio).strip():
+                        st.caption(f"💬 {t_bio}")
                     
                     f_match = follows_df[
                         (follows_df["follower_id"] == st.session_state.user_id) & 
@@ -850,18 +779,8 @@ else:
             for _, f_row in followed_users.iterrows():
                 f_id = f_row['user_id']
                 f_nk = f_row['nickname']
-                col_f1, col_f2 = st.columns([1, 4])
-                f_pic = get_profile_path(f_id)
-                f_b64 = get_profile_base64(f_pic)
-                with col_f1:
-                    if f_b64:
-                        if st.button("🖼️", key=f"btn_following_{f_id}"):
-                            open_profile_modal(f_id, f_nk)
-                        st.markdown(f'<img src="data:image/png;base64,{f_b64}" class="profile-avatar-small" style="margin-top:-38px; pointer-events:none;">', unsafe_allow_html=True)
-                    else:
-                        st.write("👤")
-                with col_f2:
-                    st.write(f"• **{f_nk}** (`{f_id}`)")
+                f_av = get_user_avatar(f_id)
+                st.write(f"• {f_av} **{f_nk}** (`{f_id}`)")
         else:
             st.caption("팔로우 승인된 친구가 없습니다.")
 
@@ -873,11 +792,12 @@ else:
         
         if not user_idx.empty:
             curr_row = users_df.loc[user_idx[0]]
+            curr_avatar = curr_row.get("avatar", "🦁 사자")
             
             with st.form("edit_profile_form"):
                 mod_nick = st.text_input("닉네임 변경", value=curr_row["nickname"]).strip()
                 mod_bio = st.text_input("한 줄 소개 변경", value=curr_row.get("bio", "")).strip()
-                new_pic = st.file_uploader("프로필 사진 변경 (앨범)", type=["jpg", "jpeg", "png"])
+                mod_avatar = st.selectbox("동물 이모지 변경", AVATAR_OPTIONS, index=AVATAR_OPTIONS.index(curr_avatar) if curr_avatar in AVATAR_OPTIONS else 0)
                 
                 if st.form_submit_button("프로필 저장"):
                     if not mod_nick:
@@ -887,12 +807,8 @@ else:
                     else:
                         users_df.loc[user_idx[0], "nickname"] = mod_nick
                         users_df.loc[user_idx[0], "bio"] = mod_bio
+                        users_df.loc[user_idx[0], "avatar"] = mod_avatar
                         
-                        if new_pic is not None:
-                            p_name = f"{st.session_state.user_id}_{int(time.time())}.png"
-                            save_profile_image(new_pic, p_name)
-                            users_df.loc[user_idx[0], "profile_pic"] = p_name
-                            
                         workouts_df.loc[workouts_df["user_id"] == st.session_state.user_id, "nickname"] = mod_nick
                         save_data(workouts_df, WORKOUT_FILE)
                         save_data(users_df, USERS_FILE)
