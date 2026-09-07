@@ -94,7 +94,7 @@ st.markdown(f"""
         margin-bottom: 0.2rem;
     }}
 
-    /* 프로필 원형 아바타 규격 및 보정 */
+    /* 프로필 원형 아바타 규격 */
     .profile-avatar {{
         width: 60px;
         height: 60px;
@@ -104,19 +104,11 @@ st.markdown(f"""
         box-shadow: 0 2px 8px rgba(56, 189, 248, 0.25);
     }}
     .profile-avatar-small {{
-        width: 38px;
-        height: 38px;
+        width: 42px;
+        height: 42px;
         border-radius: 50%;
         object-fit: cover;
         border: 1.5px solid #38BDF8;
-    }}
-    .profile-expanded-img {{
-        width: 100%;
-        max-width: 320px;
-        border-radius: 14px;
-        border: 1px solid #38BDF8;
-        margin-top: 8px;
-        margin-bottom: 8px;
     }}
 
     h1 {{ font-size: 1.6rem !important; }}
@@ -210,7 +202,6 @@ def load_workouts():
 
 def save_data(df, filename): df.to_csv(filename, index=False)
 
-# EXIF 회전 보정 이미지 저장
 def save_profile_image(uploaded_file, filename):
     img = Image.open(uploaded_file)
     try:
@@ -382,11 +373,28 @@ def generate_capped_routine(selected_parts, target_options):
             
     return list(dict.fromkeys(recommended))[:5]
 
+# 프로필 모달 확대 다이얼로그 함수
+def open_profile_modal(user_id, nick):
+    users = load_users()
+    u = users[users["user_id"] == user_id]
+    bio = u.iloc[0].get("bio", "") if not u.empty else ""
+    pic_path = get_profile_path(user_id)
+    
+    @st.dialog(f"👤 {nick} 님의 프로필")
+    def _dialog():
+        if pic_path and os.path.exists(pic_path):
+            st.image(pic_path, use_column_width=True)
+        else:
+            st.info("등록된 프로필 사진이 없습니다.")
+        if pd.notna(bio) and str(bio).strip():
+            st.write(f"💬 **한 줄 소개:** {bio}")
+        st.caption(f"ID: {user_id}")
+    _dialog()
+
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "nickname" not in st.session_state: st.session_state.nickname = None
 if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
 if "timer_running" not in st.session_state: st.session_state.timer_running = False
-if "show_my_pic" not in st.session_state: st.session_state.show_my_pic = False
 
 # --- [로그인 / 회원가입 랜딩] ---
 if st.session_state.user_id is None:
@@ -465,15 +473,10 @@ else:
     col_h1, col_h2 = st.columns([1.2, 3.8])
     with col_h1:
         if prof_b64:
-            st.markdown(f'<img src="data:image/png;base64,{prof_b64}" class="profile-avatar">', unsafe_allow_html=True)
-            if not st.session_state.show_my_pic:
-                if st.button("🔍 프사 확대", key="btn_expand_my_pic"):
-                    st.session_state.show_my_pic = True
-                    st.rerun()
-            else:
-                if st.button("✖️ 접기", key="btn_collapse_my_pic"):
-                    st.session_state.show_my_pic = False
-                    st.rerun()
+            # 내 프로필 아바타 클릭 시 팝업 열기 버튼과 일체화
+            if st.button("🖼️", key="btn_my_avatar_modal"):
+                open_profile_modal(st.session_state.user_id, st.session_state.nickname)
+            st.markdown(f'<img src="data:image/png;base64,{prof_b64}" class="profile-avatar" style="margin-top:-38px; pointer-events:none;">', unsafe_allow_html=True)
         else:
             st.write("👤")
             
@@ -485,10 +488,6 @@ else:
             st.session_state.nickname = None
             st.rerun()
             
-    # 원본 세로 확답 영역 토글
-    if st.session_state.show_my_pic and prof_b64:
-        st.markdown(f'<img src="data:image/png;base64,{prof_b64}" class="profile-expanded-img">', unsafe_allow_html=True)
-        
     st.markdown("<div class='brand-title' style='margin-top:0.4rem;'>WORKOUT ⚡</div>", unsafe_allow_html=True)
     
     tab_workout, tab_timer, tab_feed, tab_calendar, tab_friends, tab_profile = st.tabs([
@@ -656,7 +655,7 @@ else:
                 timer_box.markdown("<h2 style='text-align: center; color: #4ADE80;'>🔥 휴식 끝! 다음 세트 시작!</h2>", unsafe_allow_html=True)
                 st.session_state.timer_running = False
 
-    # TAB 3: 팔로우 피드
+    # TAB 3: 팔로우 피드 (상대방 프로필 사진 클릭 시 팝업 확대)
     with tab_feed:
         st.markdown("### 📱 팔로워 피드")
         
@@ -681,8 +680,17 @@ else:
                 with st.expander(f"{card_title} - [{routine}]", expanded=True):
                     f_pic = get_profile_path(uid)
                     f_b64 = get_profile_base64(f_pic)
-                    if f_b64:
-                        st.markdown(f'<div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;"><img src="data:image/png;base64,{f_b64}" class="profile-avatar-small"><b>{nick}</b></div>', unsafe_allow_html=True)
+                    
+                    col_p1, col_p2 = st.columns([1, 4])
+                    with col_p1:
+                        if f_b64:
+                            if st.button("🖼️", key=f"btn_feed_avatar_{uid}_{date}"):
+                                open_profile_modal(uid, nick)
+                            st.markdown(f'<img src="data:image/png;base64,{f_b64}" class="profile-avatar-small" style="margin-top:-38px; pointer-events:none;">', unsafe_allow_html=True)
+                        else:
+                            st.write("👤")
+                    with col_p2:
+                        st.write(f"**{nick}**")
                         
                     total_vol = (group["weight"] * group["reps"]).sum()
                     st.write(f"**총 볼륨:** `{total_vol:,.0f} kg`")
@@ -739,7 +747,7 @@ else:
         else:
             st.info("표시할 데이터가 없습니다.")
 
-    # TAB 5: 팔로우 관리
+    # TAB 5: 팔로우 관리 (프로필 클릭 팝업 탑재)
     with tab_friends:
         st.markdown("### 👥 팔로우 관리")
         
@@ -786,7 +794,9 @@ else:
                     t_pic = get_profile_path(t_id)
                     t_b64 = get_profile_base64(t_pic)
                     if t_b64:
-                        st.markdown(f'<img src="data:image/png;base64,{t_b64}" class="profile-avatar-small">', unsafe_allow_html=True)
+                        if st.button("🖼️", key=f"btn_search_avatar_{t_id}"):
+                            open_profile_modal(t_id, t_nick)
+                        st.markdown(f'<img src="data:image/png;base64,{t_b64}" class="profile-avatar-small" style="margin-top:-38px; pointer-events:none;">', unsafe_allow_html=True)
                             
                     st.write(f"**{t_nick}** ({t_bio if pd.notna(t_bio) else '소개 없음'})")
                     
@@ -838,7 +848,20 @@ else:
         if not my_follows.empty:
             followed_users = users_df[users_df["user_id"].isin(my_follows["following_id"])]
             for _, f_row in followed_users.iterrows():
-                st.write(f"• **{f_row['nickname']}** (`{f_row['user_id']}`)")
+                f_id = f_row['user_id']
+                f_nk = f_row['nickname']
+                col_f1, col_f2 = st.columns([1, 4])
+                f_pic = get_profile_path(f_id)
+                f_b64 = get_profile_base64(f_pic)
+                with col_f1:
+                    if f_b64:
+                        if st.button("🖼️", key=f"btn_following_{f_id}"):
+                            open_profile_modal(f_id, f_nk)
+                        st.markdown(f'<img src="data:image/png;base64,{f_b64}" class="profile-avatar-small" style="margin-top:-38px; pointer-events:none;">', unsafe_allow_html=True)
+                    else:
+                        st.write("👤")
+                with col_f2:
+                    st.write(f"• **{f_nk}** (`{f_id}`)")
         else:
             st.caption("팔로우 승인된 친구가 없습니다.")
 
