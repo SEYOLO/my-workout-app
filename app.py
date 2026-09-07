@@ -16,7 +16,7 @@ WORKOUT_FILE = "workout_data.csv"
 APP_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
 AVATAR_OPTIONS = ["🦁 사자", "🐯 호랑이", "🐻 곰", "🐺 늑대", "🦅 독수리", "🦈 상어", "🦍 고릴라", "⚡ 번개"]
 
-# 모바일 전용 CSS 및 상단 헤더 정렬
+# 모바일 전용 CSS
 st.markdown(f"""
 <head>
     <link rel="apple-touch-icon" href="{APP_ICON_URL}">
@@ -89,7 +89,6 @@ st.markdown(f"""
         margin-bottom: 0.6rem;
     }}
 
-    /* 컴팩트 헤더 프로필 박스 규격 재정렬 */
     .header-profile-card {{
         background: rgba(30, 41, 59, 0.4);
         border: 1px solid rgba(56, 189, 248, 0.2);
@@ -293,7 +292,7 @@ def get_yt_url(exercise_name):
     return f"https://www.youtube.com/results?search_query={encoded_query}"
 
 ANATOMICAL_POOL = {
-    "가슴_상부": ["인클라인 벤치프레스", "인클라인 덤벨 벤치프레스"],
+    "가슴_상부": ["인클라인 벤치프레스", "인클라인 덤벨 벤치프레스", "인클라인 덤벨 플라이"],
     "가슴_중부": ["벤치프레스", "덤벨 벤치프레스", "체스트 프레스 머신", "펙덱 플라이 머신"],
     "가슴_하부": ["딥스", "케이블 크로스오버"],
     
@@ -316,62 +315,43 @@ ANATOMICAL_POOL = {
 
 ALL_EXERCISES = list(set(sum(ANATOMICAL_POOL.values(), [])))
 
-# 동적 시드(Seed) 적용 추천 로직
-def generate_capped_routine(selected_parts, target_options, seed_val):
-    random.seed(seed_val)
-    num_parts = len(selected_parts)
+# 강력 무작위 조합 알고리즘
+def generate_capped_routine(selected_parts, target_options):
     recommended = []
+    num_parts = len(selected_parts)
     
     for part in selected_parts:
         t_opt = target_options.get(part, "기본")
         
         if part == "가슴":
-            if num_parts == 1:
-                if t_opt == "윗가슴 집중": pool = ["인클라인 벤치프레스", "인클라인 덤벨 벤치프레스", "인클라인 덤벨 플라이", "펙덱 플라이 머신"]
-                elif t_opt == "아랫가슴 집중": pool = ["딥스", "케이블 크로스오버", "벤치프레스", "펙덱 플라이 머신"]
-                else: pool = ["벤치프레스", "인클라인 덤벨 벤치프레스", "펙덱 플라이 머신", "딥스"]
-            elif num_parts == 2:
-                if t_opt == "윗가슴 집중": pool = ["인클라인 벤치프레스", "인클라인 덤벨 벤치프레스", "펙덱 플라이 머신"]
-                elif t_opt == "아랫가슴 집중": pool = ["딥스", "케이블 크로스오버", "벤치프레스"]
-                else: pool = ["벤치프레스", "인클라인 벤치프레스", "펙덱 플라이 머신"]
+            if t_opt == "윗가슴 집중":
+                candidates = random.sample(ANATOMICAL_POOL["가슴_상부"], min(2, len(ANATOMICAL_POOL["가슴_상부"]))) + [random.choice(ANATOMICAL_POOL["가슴_중부"])]
+            elif t_opt == "아랫가슴 집중":
+                candidates = random.sample(ANATOMICAL_POOL["가슴_하부"], min(2, len(ANATOMICAL_POOL["가슴_하부"]))) + [random.choice(ANATOMICAL_POOL["가슴_중부"])]
             else:
-                pool = [random.choice(ANATOMICAL_POOL["가슴_상부"] if t_opt == "윗가슴 집중" else ANATOMICAL_POOL["가슴_중부"])]
-            recommended.extend(pool)
+                candidates = [random.choice(ANATOMICAL_POOL["가슴_상부"]), random.choice(ANATOMICAL_POOL["가슴_중부"]), random.choice(ANATOMICAL_POOL["가슴_하부"])]
+            recommended.extend(candidates[:3 if num_parts <= 2 else 2])
             
         elif part == "등":
-            if num_parts == 1:
-                if t_opt == "너비(수직) 집중": pool = ["풀업", "렛풀다운", "암 풀다운", "시티드 케이블 로우"]
-                elif t_opt == "두께(수평) 집중": pool = ["바벨로우", "시티드 케이블 로우", "원암 덤벨로우", "렛풀다운"]
-                else: pool = ["데드리프트", "렛풀다운", "바벨로우", "시티드 케이블 로우"]
-            elif num_parts == 2:
-                if t_opt == "너비(수직) 집중": pool = ["풀업", "렛풀다운", "바벨로우"]
-                elif t_opt == "두께(수평) 집중": pool = ["바벨로우", "시티드 케이블 로우", "렛풀다운"]
-                else: pool = ["렛풀다운", "바벨로우", "시티드 케이블 로우"]
+            if t_opt == "너비(수직) 집중":
+                candidates = random.sample(ANATOMICAL_POOL["등_너비"], min(2, len(ANATOMICAL_POOL["등_너비"]))) + [random.choice(ANATOMICAL_POOL["등_두께"])]
+            elif t_opt == "두께(수평) 집중":
+                candidates = random.sample(ANATOMICAL_POOL["등_두께"], min(2, len(ANATOMICAL_POOL["등_두께"]))) + [random.choice(ANATOMICAL_POOL["등_너비"])]
             else:
-                pool = [random.choice(ANATOMICAL_POOL["등_너비"] if t_opt == "너비(수직) 집중" else ANATOMICAL_POOL["등_두께"])]
-            recommended.extend(pool)
+                candidates = [random.choice(ANATOMICAL_POOL["등_메인"]), random.choice(ANATOMICAL_POOL["등_너비"]), random.choice(ANATOMICAL_POOL["등_두께"])]
+            recommended.extend(candidates[:3 if num_parts <= 2 else 2])
             
         elif part == "하체":
-            if num_parts == 1:
-                pool = ["스쿼트", "레그프레스", "스티프 레그 데드리프트", "레그 익스텐션"]
-            elif num_parts == 2:
-                pool = ["스쿼트", "레그프레스", "레그 컬"]
-            else:
-                pool = [random.choice(ANATOMICAL_POOL["하체_전면"])]
-            recommended.extend(pool)
+            candidates = [random.choice(ANATOMICAL_POOL["하체_전면"]), random.choice(ANATOMICAL_POOL["하체_후면"]), random.choice(ANATOMICAL_POOL["하체_내외전"])]
+            recommended.extend(candidates[:3 if num_parts <= 2 else 2])
             
         elif part == "어깨":
-            if num_parts == 1:
-                pool = ["오버헤드 프레스", "사이드 레터럴 레이즈", "벤트오버 레터럴 레이즈", "덤벨 숄더프레스"]
-            elif num_parts == 2:
-                pool = ["오버헤드 프레스", "사이드 레터럴 레이즈", "페이스풀"]
-            else:
-                pool = [random.choice(ANATOMICAL_POOL["어깨_전면"] if t_opt != "측면 집중" else ANATOMICAL_POOL["어깨_측면"])]
-            recommended.extend(pool)
+            candidates = [random.choice(ANATOMICAL_POOL["어깨_전면"]), random.choice(ANATOMICAL_POOL["어깨_측면"]), random.choice(ANATOMICAL_POOL["어깨_후면"])]
+            recommended.extend(candidates[:3 if num_parts <= 2 else 2])
             
         elif part in ["이두", "삼두", "복근/유산소"]:
             count = 2 if num_parts <= 2 else 1
-            recommended.extend(random.sample(ANATOMICAL_POOL[part], count))
+            recommended.extend(random.sample(ANATOMICAL_POOL[part], min(count, len(ANATOMICAL_POOL[part]))))
             
     return list(dict.fromkeys(recommended))[:5]
 
@@ -379,7 +359,7 @@ if "user_id" not in st.session_state: st.session_state.user_id = None
 if "nickname" not in st.session_state: st.session_state.nickname = None
 if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
 if "timer_running" not in st.session_state: st.session_state.timer_running = False
-if "routine_seed" not in st.session_state: st.session_state.routine_seed = int(time.time())
+if "rec_list" not in st.session_state: st.session_state.rec_list = []
 
 # --- [로그인 / 회원가입 랜딩] ---
 if st.session_state.user_id is None:
@@ -446,7 +426,7 @@ if st.session_state.user_id is None:
             st.rerun()
 
 else:
-    # --- [로그인 완료 메인 화면 깔끔한 상단 헤더 모듈] ---
+    # --- [상단 헤더 모듈] ---
     my_avatar = get_user_avatar(st.session_state.user_id)
     
     col_card, col_btn = st.columns([3.5, 1.2])
@@ -485,18 +465,17 @@ else:
         
         selected_parts = []
         target_options = {}
-        recommended_list = []
         
         if split_type == "무분할 (전신 4대 운동)":
-            random.seed(st.session_state.routine_seed)
-            # 무분할 전신 4대 대근육 무작위 추천
-            recommended_list = [
-                random.choice(["스쿼트", "레그프레스"]),
-                random.choice(["벤치프레스", "인클라인 벤치프레스", "덤벨 벤치프레스"]),
-                random.choice(["데드리프트", "렛풀다운", "바벨로우", "풀업"]),
-                random.choice(["오버헤드 프레스", "덤벨 숄더프레스", "딥스"])
-            ]
             selected_parts = ["전신"]
+            if not st.session_state.rec_list or st.session_state.get("last_split") != split_type:
+                st.session_state.rec_list = [
+                    random.choice(["스쿼트", "레그프레스"]),
+                    random.choice(["벤치프레스", "인클라인 벤치프레스", "체스트 프레스 머신"]),
+                    random.choice(["데드리프트", "렛풀다운", "바벨로우", "시티드 케이블 로우"]),
+                    random.choice(["오버헤드 프레스", "덤벨 숄더프레스", "숄더프레스 머신"])
+                ]
+                st.session_state.last_split = split_type
             
         elif split_type == "분할 운동 (부위 지정)":
             available_parts = ["가슴", "등", "하체", "어깨", "이두", "삼두", "복근/유산소"]
@@ -514,23 +493,35 @@ else:
                     else:
                         target_options[p] = "기본"
                 
-                recommended_list = generate_capped_routine(selected_parts, target_options, st.session_state.routine_seed)
+                # 조합 생성
+                curr_parts_str = ",".join(selected_parts) + "_" + str(target_options)
+                if not st.session_state.rec_list or st.session_state.get("last_parts") != curr_parts_str:
+                    st.session_state.rec_list = generate_capped_routine(selected_parts, target_options)
+                    st.session_state.last_parts = curr_parts_str
+                    st.session_state.last_split = split_type
 
         selected_exercises = []
-        if recommended_list or split_type == "자율 선택":
-            if recommended_list:
+        if (split_type != "선택 안함" and split_type != "자율 선택" and st.session_state.rec_list) or split_type == "자율 선택":
+            if split_type != "자율 선택" and st.session_state.rec_list:
                 col_rec1, col_rec2 = st.columns([2.8, 1.2])
-                with col_rec1: st.success(f"🎯 **[추천]** 총 {len(recommended_list)}개 종목 구성됨")
+                with col_rec1: st.success(f"🎯 **[추천]** 총 {len(st.session_state.rec_list)}개 종목 구성됨")
                 with col_rec2:
-                    # 모바일 세션 시드 강제 변경 방식 적용
                     if st.button("🎲 재추천", key="btn_re_recommend"):
-                        st.session_state.routine_seed = int(time.time() * 1000)
+                        if split_type == "무분할 (전신 4대 운동)":
+                            st.session_state.rec_list = [
+                                random.choice(["스쿼트", "레그프레스"]),
+                                random.choice(["벤치프레스", "인클라인 벤치프레스", "체스트 프레스 머신"]),
+                                random.choice(["데드리프트", "렛풀다운", "바벨로우", "시티드 케이블 로우"]),
+                                random.choice(["오버헤드 프레스", "덤벨 숄더프레스", "숄더프레스 머신"])
+                            ]
+                        else:
+                            st.session_state.rec_list = generate_capped_routine(selected_parts, target_options)
                         st.rerun()
             
             selected_exercises = st.multiselect(
                 "종목 구성 (원하는 대로 자유롭게 추가/삭제 가능)", 
                 options=ALL_EXERCISES, 
-                default=recommended_list if recommended_list else None
+                default=st.session_state.rec_list if split_type != "자율 선택" else None
             )
             
         custom_ex = st.text_input("직접 종목 입력 (쉼표 구분)", placeholder="예: 케이블 로우, 스트레칭")
