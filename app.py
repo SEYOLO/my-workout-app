@@ -6,14 +6,14 @@ import random
 from datetime import datetime
 import urllib.parse
 
-# 1. 페이지 기본 설정 및 모던 미니멀 스타일링
+# 1. 페이지 기본 설정
 st.set_page_config(page_title="WORKOUT", page_icon="⚡", layout="centered", initial_sidebar_state="collapsed")
 
 USERS_FILE = "users.csv"
 FOLLOWS_FILE = "follows.csv"
 WORKOUT_FILE = "workout_data.csv"
 
-# Minimalistic Modern Dark UI CSS
+# Minimalistic Modern Dark UI + Full-Width Segmented Control CSS
 st.markdown("""
 <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
@@ -24,7 +24,7 @@ st.markdown("""
         color: #E2E8F0;
     }
 
-    /* 상단 미니멀 타이틀 */
+    /* 상단 브랜드 타이틀 */
     .brand-title {
         font-size: 2.2rem;
         font-weight: 800;
@@ -41,7 +41,40 @@ st.markdown("""
         margin-bottom: 2rem;
     }
 
-    /* 단일 랜딩 카드 */
+    /* 탭 메뉴 균등 분할 스타일링 */
+    div[data-baseweb="tab-list"] {
+        display: flex !important;
+        width: 100% !important;
+        background-color: #14161D !important;
+        border-radius: 12px !important;
+        padding: 4px !important;
+        gap: 2px !important;
+        border: 1px solid #222634 !important;
+        margin-bottom: 1.5rem !important;
+    }
+
+    button[data-baseweb="tab"] {
+        flex: 1 1 0% !important;
+        width: 100% !important;
+        text-align: center !important;
+        justify-content: center !important;
+        border-radius: 8px !important;
+        padding: 10px 0px !important;
+        font-size: 0.85rem !important;
+        font-weight: 700 !important;
+        color: #64748B !important;
+        border: none !important;
+        background: transparent !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+
+    button[aria-selected="true"] {
+        background: #1E293B !important;
+        color: #38BDF8 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    /* 단일 폼 및 카드 박스 */
     div[data-testid="stForm"] {
         background: #14161D !important;
         border: 1px solid #222634 !important;
@@ -50,7 +83,7 @@ st.markdown("""
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
     }
 
-    /* 세련된 메인 버튼 */
+    /* 버튼 스타일 */
     .stButton > button, div[data-testid="stForm"] button {
         width: 100% !important;
         background: #2563EB !important;
@@ -62,11 +95,9 @@ st.markdown("""
         font-size: 0.98rem !important;
         transition: all 0.2s ease !important;
     }
-    .stButton > button:hover {
-        background: #1D4ED8 !important;
-    }
+    .stButton > button:hover { background: #1D4ED8 !important; }
 
-    /* 지난 기록 / 가이드 카드 */
+    /* 안내 카드 */
     .prev-record-card {
         background: rgba(56, 189, 248, 0.05);
         border: 1px solid rgba(56, 189, 248, 0.2);
@@ -82,13 +113,10 @@ st.markdown("""
         border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.83rem; color: #FBBF24;
     }
 
-    /* 탭 헤더 디자인 */
-    button[data-baseweb="tab"] { font-size: 0.9rem !important; font-weight: 600 !important; color: #64748B !important; }
-    button[aria-selected="true"] { color: #38BDF8 !important; border-bottom: 2px solid #38BDF8 !important; }
-
     @media (max-width: 640px) {
-        .block-container { padding-left: 0.9rem !important; padding-right: 0.9rem !important; padding-top: 1rem !important; }
+        .block-container { padding-left: 0.8rem !important; padding-right: 0.8rem !important; padding-top: 1rem !important; }
         .brand-title { font-size: 1.8rem; }
+        button[data-baseweb="tab"] { font-size: 0.78rem !important; padding: 8px 0px !important; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -169,12 +197,11 @@ def generate_dynamic_routine(routine_type):
         return random.sample(EXERCISE_POOL["어깨_메인"], 2) + random.sample(EXERCISE_POOL["어깨_서브"], 2) + random.sample([x for x in EXERCISE_POOL["복근/유산소"] if "런닝" in x or "계단" in x or "사이클" in x], 1)
     return []
 
-# 세션 상태 (자동 로그인 / 화면 전환 모드)
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "nickname" not in st.session_state: st.session_state.nickname = None
 if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
 
-# --- [상용 서비스 스타일 단일 로그인/회원가입 랜딩] ---
+# --- [단일 로그인/회원가입 랜딩] ---
 if st.session_state.user_id is None:
     st.markdown("<div class='brand-title'>WORKOUT</div>", unsafe_allow_html=True)
     st.markdown("<div class='brand-sub'>Personal Set Log & Social Feed</div>", unsafe_allow_html=True)
@@ -192,7 +219,6 @@ if st.session_state.user_id is None:
             if submit_login:
                 user_match = users_df[(users_df["user_id"] == login_id) & (users_df["password"] == login_pw)]
                 if not user_match.empty:
-                    # 세션에 로그인 상태 보존 (자동 로그인 작동)
                     st.session_state.user_id = login_id
                     st.session_state.nickname = user_match.iloc[0]["nickname"]
                     st.rerun()
@@ -246,6 +272,7 @@ else:
         
     st.markdown("<div class='brand-title' style='margin-top:0; font-size:1.8rem;'>WORKOUT ⚡</div>", unsafe_allow_html=True)
     
+    # 100% 균등 분할 세그먼트 메뉴 적용
     tab_workout, tab_timer, tab_feed, tab_calendar, tab_friends, tab_history = st.tabs([
         "기록", "타이머", "피드", "달력", "팔로우", "리포트"
     ])
