@@ -10,7 +10,7 @@ import extra_streamlit_components as stx
 # 1. 페이지 기본 설정
 st.set_page_config(page_title="WORKOUT", page_icon="⚡", layout="centered", initial_sidebar_state="collapsed")
 
-# 기존의 @st.cache_resource 함수 전체를 지우고 아래 3줄로 교체
+# 쿠키 매니저 초기화 (Session State 안전 방식)
 if "cookie_manager" not in st.session_state:
     st.session_state.cookie_manager = stx.CookieManager()
 
@@ -407,8 +407,9 @@ if st.session_state.user_id is None:
                     st.session_state.nickname = user_match.iloc[0]["nickname"]
                     
                     if auto_login_check:
-                        cookie_manager.set('workout_auth_user', login_id, expires_at=datetime(2030, 1, 1))
-                        cookie_manager.set('workout_auth_nick', user_match.iloc[0]["nickname"], expires_at=datetime(2030, 1, 1))
+                        # 중복 키 에러 방지를 위한 key 지정 (ck_set_user, ck_set_nick)
+                        cookie_manager.set('workout_auth_user', login_id, expires_at=datetime(2030, 1, 1), key="ck_set_user")
+                        cookie_manager.set('workout_auth_nick', user_match.iloc[0]["nickname"], expires_at=datetime(2030, 1, 1), key="ck_set_nick")
                     st.rerun()
                 else:
                     st.error("아이디 또는 비밀번호가 올바르지 않습니다.")
@@ -476,8 +477,9 @@ else:
             st.rerun()
     with col_btn:
         if st.button("로그아웃", key="btn_logout"):
-            cookie_manager.delete('workout_auth_user')
-            cookie_manager.delete('workout_auth_nick')
+            # 로그아웃 삭제 연산 시에도 고유 key 지정
+            cookie_manager.delete('workout_auth_user', key="ck_del_user")
+            cookie_manager.delete('workout_auth_nick', key="ck_del_nick")
             st.session_state.user_id = None
             st.session_state.nickname = None
             st.rerun()
