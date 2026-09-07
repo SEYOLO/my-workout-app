@@ -16,8 +16,6 @@ if "cookie_manager" not in st.session_state:
 
 cookie_manager = st.session_state.cookie_manager
 
-cookie_manager = get_cookie_manager()
-
 USERS_FILE = "users.csv"
 FOLLOWS_FILE = "follows.csv"
 WORKOUT_FILE = "workout_data.csv"
