@@ -20,7 +20,7 @@ if not os.path.exists(PROFILE_DIR):
 
 APP_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
 
-# 모바일 & PC 반응형 깔끔한 버튼 커스텀 CSS
+# 모바일 상단 잘림 방지 + 모던 다크 스플래시 CSS
 st.markdown(f"""
 <head>
     <link rel="apple-touch-icon" href="{APP_ICON_URL}">
@@ -30,9 +30,60 @@ st.markdown(f"""
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     * {{ font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }}
     
+    /* Streamlit 상단 기본 헤더 요소 숨김 */
+    header[data-testid="stHeader"] {{
+        display: none !important;
+    }}
+
     .stApp {{
         background: #0D0E12;
         color: #E2E8F0;
+    }}
+
+    /* 모바일 노치 및 안전 구역(Safe Area) 반응형 패딩 */
+    .block-container {{
+        padding-top: max(3.2rem, env(safe-area-inset-top)) !important;
+        padding-bottom: max(2.0rem, env(safe-area-inset-bottom)) !important;
+    }}
+
+    /* 네이티브 다크 스플래시 화면 */
+    #splash-screen {{
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background-color: #0D0E12;
+        z-index: 999999;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        animation: fadeOutSplash 0.5s ease-in-out 1.2s forwards;
+        pointer-events: none;
+    }}
+
+    .splash-logo {{
+        font-size: 2.8rem;
+        font-weight: 900;
+        letter-spacing: -0.06em;
+        color: #F8FAFC;
+        animation: pulseLogo 1.0s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
+    }}
+
+    .splash-sub {{
+        font-size: 0.85rem;
+        color: #38BDF8;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        margin-top: 0.5rem;
+    }}
+
+    @keyframes pulseLogo {{
+        0% {{ transform: scale(0.96); opacity: 0.8; }}
+        100% {{ transform: scale(1.02); opacity: 1; text-shadow: 0 0 20px rgba(56, 189, 248, 0.4); }}
+    }}
+
+    @keyframes fadeOutSplash {{
+        0% {{ opacity: 1; transform: translateY(0); }}
+        100% {{ opacity: 0; transform: translateY(-20px); visibility: hidden; }}
     }}
 
     .brand-title {{
@@ -41,7 +92,7 @@ st.markdown(f"""
         letter-spacing: -0.05em;
         color: #F8FAFC;
         text-align: center;
-        margin-top: 0.8rem;
+        margin-top: 0.2rem;
         margin-bottom: 0.2rem;
     }}
     .brand-sub {{
@@ -51,23 +102,18 @@ st.markdown(f"""
         margin-bottom: 1.5rem;
     }}
 
-    /* 메뉴 버튼 6분할 스타일 */
     .stButton > button {{
         width: 100% !important;
-        background: #14161D !important;
-        color: #94A3B8 !important;
-        border: 1px solid #222634 !important;
+        background: #2563EB !important;
+        color: #FFFFFF !important;
+        border: none !important;
         border-radius: 10px !important;
-        padding: 10px 0px !important;
+        padding: 12px 16px !important;
         font-weight: 700 !important;
-        font-size: 0.85rem !important;
+        font-size: 0.95rem !important;
         transition: all 0.2s ease !important;
     }}
-    
-    .stButton > button:hover {{
-        border-color: #38BDF8 !important;
-        color: #38BDF8 !important;
-    }}
+    .stButton > button:hover {{ background: #1D4ED8 !important; }}
 
     .prev-record-card {{
         background: rgba(56, 189, 248, 0.05);
@@ -85,11 +131,16 @@ st.markdown(f"""
     }}
 
     @media (max-width: 640px) {{
-        .block-container {{ padding-left: 0.4rem !important; padding-right: 0.4rem !important; padding-top: 0.6rem !important; }}
+        .block-container {{ padding-left: 0.6rem !important; padding-right: 0.6rem !important; }}
         .brand-title {{ font-size: 1.6rem; }}
-        .stButton > button {{ font-size: 0.75rem !important; padding: 8px 0px !important; }}
     }}
 </style>
+
+<!-- Splash Overlay -->
+<div id="splash-screen">
+    <div class="splash-logo">WORKOUT ⚡</div>
+    <div class="splash-sub">PERFORMANCE LOG</div>
+</div>
 """, unsafe_allow_html=True)
 
 # 2. DB 초기화
@@ -130,15 +181,19 @@ def get_profile_path(user_id):
     return None
 
 EXERCISE_TIPS = {
+    # 가슴
     "벤치프레스": "견갑(날개뼈)을 패킹 후 가슴을 열고, 바벨을 쇄골이 아닌 명치 밑으로 내립니다.",
     "인클라인 벤치프레스": "벤치 각도를 30도로 맞추고, 바벨을 쇄골 살짝 아래 윗가슴 라인으로 이완시킵니다.",
     "덤벨 벤치프레스": "수축 시 덤벨을 부딪치지 말고, 이완 시 팔꿈치 각도를 75도로 유지하며 최대한 늘립니다.",
     "인클라인 덤벨 벤치프레스": "상체 각도를 세우고 덤벨을 윗가슴 바깥쪽까지 수평 이완 후 수직으로 밀어올립니다.",
     "체스트 프레스 머신": "등패드에 엉덩이와 어깨를 고정하고 손잡이가 가슴 중앙 수평선에 오도록 의자를 조절합니다.",
-    "펙덱 플라이 머신": "팔꿈치를 살짝 구부려 고정하고, 손이 아닌 팔꿈치 안쪽으로 가슴을 쥐어짜듯 모읍니다.",
+    "펙덱 플라이 머신": "팔꿈치를 살짝 구부려 고정하고, 손이 아닌 팔꿈치 안쪽으로 가슴을 쥐어짜듯 모옵니다.",
     "케이블 크로스오버": "상체를 살짝 숙이고 케이블 손잡이를 명치/아랫가슴 방향으로 둥글게 모아줍니다.",
     "딥스": "상체를 앞으로 30도 숙여 체중을 가슴 하부에 싣고, 팔꿈치가 90도가 될 때까지 내립니다.",
     "덤벨 플라이": "팔꿈치 각도를 변형하지 말고 포옹하듯 곡선을 그리며 가슴 외곽을 신장시킵니다.",
+    "인클라인 덤벨 플라이": "윗가슴 장력을 유지하며 팔꿈치 각도를 고정하고 위쪽으로 모아줍니다.",
+
+    # 등
     "데드리프트": "바벨을 신발끈 중앙 위에 두고, 바를 다리에 붙인 채 고관절(힙힌지)을 접어 들어올립니다.",
     "바벨로우": "상체를 45도 숙이고 복압을 잡은 뒤 바벨을 허벅지 타고 배꼽 방향으로 당깁니다.",
     "풀업": "숄더패킹으로 견갑을 먼저 내린 뒤 가슴을 봉에 맞닿는다는 느낌으로 광배근을 당깁니다.",
@@ -148,6 +203,8 @@ EXERCISE_TIPS = {
     "원암 덤벨로우": "골반과 척추 수평을 유지하고 팔꿈치를 골반 쪽으로 그리는 궤적으로 당깁니다.",
     "어시스트 풀업 머신": "무릎을 패드에 밀착하고 상체 우측/좌측 균형을 맞춰 광배 하부까지 이완시킵니다.",
     "암 풀다운": "팔꿈치를 살짝 구부려 고정하고 바를 허벅지 방향으로 호를 그리며 짓눌러 내려줍니다.",
+
+    # 하체
     "스쿼트": "발바닥 전체로 지면을 지탱하고 무릎과 고관절이 동시에 접히며 척추 중립을 유지합니다.",
     "레그프레스": "발판 상단에 발을 두고 무릎이 안쪽으로 모이지 않게 하며 허리가 패드에서 뜨지 않게 내립니다.",
     "스티프 레그 데드리프트": "무릎을 살짝 구부린 상태로 고정하고 엉덩이를 뒤로 빼며 대퇴이두(햄스트링)를 늘립니다.",
@@ -157,6 +214,8 @@ EXERCISE_TIPS = {
     "이너사이 머신": "내전근(허벅지 안쪽)을 장력 유지 상태로 이완 후 튕기지 않고 지긋이 모아줍니다.",
     "아웃사이 머신": "상체를 살짝 숙여 둔근(엉덩이)에 자극을 집중시키고 무릎 외각으로 패드를 밀어냅니다.",
     "카프 레이즈": "가동범위를 최대한 사용하여 뒤꿈치를 끝까지 올렸다가 가자미근/비복근을 최대로 늘립니다.",
+
+    # 어깨
     "오버헤드 프레스": "코어와 둔근에 수축을 유지하고 바벨을 턱을 스치며 머리 위 직수평으로 밀어 올립니다.",
     "덤벨 숄더프레스": "덤벨이 팔꿈치 수직 선상에서 벗어나지 않게 유지하며 귀 높이까지 내렸다 올립니다.",
     "숄더프레스 머신": "등받이에 허리를 밀착하고 팔꿈치가 몸 뒤로 빠지지 않도록 유의하며 밀어줍니다.",
@@ -164,6 +223,8 @@ EXERCISE_TIPS = {
     "벤트오버 레터럴 레이즈": "상체를 90도 숙이고 후면 삼각근의 힘으로 새끼손가락 방향을 위로 들며 넓게 벌립니다.",
     "페이스풀": "케이블을 눈높이에 맞추고 로프를 이마/눈썹 방향으로 당기며 팔꿈치를 외회전시킵니다.",
     "아놀드 프레스": "손바닥이 자신을 향한 상태에서 회전시키며 올려 전면과 측면 삼각근을 동시에 타격합니다.",
+
+    # 팔
     "트라이셉스 케이블 푸쉬다운": "팔꿈치를 옆구리에 박아두고 바/로프를 바닥 방향으로 삼두를 완전 압축시킵니다.",
     "라잉 트라이셉스 익스텐션": "팔꿈치를 수직보다 살짝 뒤로 기울여 고정하고 바를 정수리 뒤쪽으로 내립니다.",
     "딥스(삼두)": "상체를 수직으로 세운 상태를 유지하여 중량이 가슴이 아닌 삼두근에 쏠리게 합니다.",
@@ -171,6 +232,8 @@ EXERCISE_TIPS = {
     "덤벨 컬": "손목을 밖으로 수피네이션(회전)시키며 이두근의 정점 수축을 극대화합니다.",
     "해머 컬": "손바닥이 서로 마주 보게 유지하여 상완근과 상완요골근(전완근)을 집중 타격합니다.",
     "프리처 컬": "패드에 삼두를 완전히 밀착시켜 반동을 차단하고 이두의 이완을 최대로 끌어냅니다.",
+
+    # 복근 / 유산소
     "크런치": "허리를 바닥에 붙인 채 상복부만 말아 올려 갈비뼈와 골반이 가까워지게 만듭니다.",
     "레그 레이즈": "요추(허리)가 바닥에서 뜨지 않도록 복압을 유지하며 하복부 힘으로 다리를 들어 올립니다.",
     "플랭크": "어깨 아래 팔꿈치를 두고 머리부터 발끝까지 일직선을 만들어 코어 전체에 장력을 줍니다.",
@@ -184,38 +247,90 @@ def get_yt_url(exercise_name):
     encoded_query = urllib.parse.quote(query)
     return f"https://www.youtube.com/results?search_query={encoded_query}"
 
-EXERCISE_POOL = {
-    "가슴_메인": ["벤치프레스", "인클라인 벤치프레스", "덤벨 벤치프레스", "인클라인 덤벨 벤치프레스"],
-    "가슴_서브": ["체스트 프레스 머신", "펙덱 플라이 머신", "케이블 크로스오버", "딥스", "덤벨 플라이"],
-    "등_메인": ["데드리프트", "바벨로우", "풀업", "티바로우"],
-    "등_서브": ["렛풀다운", "시티드 케이블 로우", "원암 덤벨로우", "어시스트 풀업 머신", "암 풀다운"],
-    "하체_메인": ["스쿼트", "레그프레스", "스티프 레그 데드리프트"],
-    "하체_서브": ["레그 익스텐션", "레그 컬", "런지", "이너사이 머신", "아웃사이 머신", "카프 레이즈"],
-    "어깨_메인": ["오버헤드 프레스", "덤벨 숄더프레스", "숄더프레스 머신"],
-    "어깨_서브": ["사이드 레터럴 레이즈", "벤트오버 레터럴 레이즈", "페이스풀", "아놀드 프레스"],
+ANATOMICAL_POOL = {
+    "가슴_상부_프레스": ["인클라인 벤치프레스", "인클라인 덤벨 벤치프레스"],
+    "가슴_중하부_프레스": ["벤치프레스", "덤벨 벤치프레스", "체스트 프레스 머신"],
+    "가슴_하부_고립": ["딥스", "케이블 크로스오버"],
+    "가슴_수축_플라이": ["펙덱 플라이 머신", "덤벨 플라이", "인클라인 덤벨 플라이"],
+    
+    "등_수직_너비": ["풀업", "렛풀다운", "어시스트 풀업 머신", "암 풀다운"],
+    "등_수평_두께": ["바벨로우", "시티드 케이블 로우", "티바로우", "원암 덤벨로우"],
+    "등_전신_메인": ["데드리프트"],
+    
+    "하체_전면_스쿼트": ["스쿼트", "레그프레스", "레그 익스텐션"],
+    "하체_후면_둔근": ["스티프 레그 데드리프트", "레그 컬", "런지"],
+    "하체_내외전근": ["이너사이 머신", "아웃사이 머신", "카프 레이즈"],
+    
+    "어깨_전면": ["오버헤드 프레스", "덤벨 숄더프레스", "숄더프레스 머신", "아놀드 프레스"],
+    "어깨_측면": ["사이드 레터럴 레이즈"],
+    "어깨_후면": ["벤트오버 레터럴 레이즈", "페이스풀"],
+    
     "삼두": ["트라이셉스 케이블 푸쉬다운", "라잉 트라이셉스 익스텐션", "딥스(삼두)"],
     "이두": ["바벨 컬", "덤벨 컬", "해머 컬", "프리처 컬"],
-    "복근/유산소": ["크런치", "레그 레이즈", "플랭크", "천국의 계단(스텝밀)", "런닝머신", "사이클"]
+    "유산소/복근": ["크런치", "레그 레이즈", "플랭크", "천국의 계단(스텝밀)", "런닝머신", "사이클"]
 }
 
-ALL_EXERCISES = list(set(sum(EXERCISE_POOL.values(), [])))
+ALL_EXERCISES = list(set(sum(ANATOMICAL_POOL.values(), [])))
 
-def generate_dynamic_routine(routine_type):
+def generate_anatomical_routine(routine_type):
     random.seed(time.time())
-    if routine_type == "가슴/삼두 DAY":
-        return random.sample(EXERCISE_POOL["가슴_메인"], 2) + random.sample(EXERCISE_POOL["가슴_서브"], 2) + random.sample(EXERCISE_POOL["삼두"], 1)
-    elif routine_type == "등/이두 DAY":
-        return random.sample(EXERCISE_POOL["등_메인"], 2) + random.sample(EXERCISE_POOL["등_서브"], 2) + random.sample(EXERCISE_POOL["이두"], 1)
+    
+    if routine_type == "가슴 전체 DAY":
+        return [
+            random.choice(ANATOMICAL_POOL["가슴_상부_프레스"]),
+            random.choice(ANATOMICAL_POOL["가슴_중하부_프레스"]),
+            random.choice(ANATOMICAL_POOL["가슴_수축_플라이"]),
+            random.choice(ANATOMICAL_POOL["삼두"])
+        ]
+    elif routine_type == "윗가슴 집중 DAY":
+        return [
+            ANATOMICAL_POOL["가슴_상부_프레스"][0],
+            ANATOMICAL_POOL["가슴_상부_프레스"][1],
+            "인클라인 덤벨 플라이",
+            random.choice(ANATOMICAL_POOL["삼두"])
+        ]
+    elif routine_type == "등 전체 DAY":
+        return [
+            random.choice(ANATOMICAL_POOL["등_수직_너비"]),
+            random.choice(ANATOMICAL_POOL["등_수평_두께"]),
+            random.choice(ANATOMICAL_POOL["등_수직_너비"]),
+            random.choice(ANATOMICAL_POOL["이두"])
+        ]
+    elif routine_type == "등 너비(수직) 집중 DAY":
+        return [
+            "풀업",
+            "렛풀다운",
+            "암 풀다운",
+            random.choice(ANATOMICAL_POOL["등_수평_두께"]),
+            random.choice(ANATOMICAL_POOL["이두"])
+        ]
+    elif routine_type == "등 두께(수평) 집중 DAY":
+        return [
+            "바벨로우",
+            "시티드 케이블 로우",
+            "원암 덤벨로우",
+            random.choice(ANATOMICAL_POOL["등_수직_너비"]),
+            random.choice(ANATOMICAL_POOL["이두"])
+        ]
     elif routine_type == "하체/복근 DAY":
-        return random.sample(EXERCISE_POOL["하체_메인"], 2) + random.sample(EXERCISE_POOL["하체_서브"], 2) + random.sample(EXERCISE_POOL["복근/유산소"], 1)
-    elif routine_type == "어깨/유산소 DAY":
-        return random.sample(EXERCISE_POOL["어깨_메인"], 2) + random.sample(EXERCISE_POOL["어깨_서브"], 2) + random.sample([x for x in EXERCISE_POOL["복근/유산소"] if "런닝" in x or "계단" in x or "사이클" in x], 1)
+        return [
+            random.choice(ANATOMICAL_POOL["하체_전면_스쿼트"]),
+            random.choice(ANATOMICAL_POOL["하체_후면_둔근"]),
+            random.choice(ANATOMICAL_POOL["하체_내외전근"]),
+            random.choice(ANATOMICAL_POOL["유산소/복근"])
+        ]
+    elif routine_type == "어깨 입체감 DAY":
+        return [
+            random.choice(ANATOMICAL_POOL["어깨_전면"]),
+            random.choice(ANATOMICAL_POOL["어깨_측면"]),
+            random.choice(ANATOMICAL_POOL["어깨_후면"]),
+            random.choice([x for x in ANATOMICAL_POOL["유산소/복근"] if "런닝" in x or "계단" in x or "사이클" in x])
+        ]
     return []
 
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "nickname" not in st.session_state: st.session_state.nickname = None
 if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
-if "active_tab" not in st.session_state: st.session_state.active_tab = "기록"
 if "timer_running" not in st.session_state: st.session_state.timer_running = False
 
 # --- [로그인 / 회원가입 랜딩] ---
@@ -309,39 +424,36 @@ else:
         
     st.markdown("<div class='brand-title' style='margin-top:0; font-size:1.6rem;'>WORKOUT ⚡</div>", unsafe_allow_html=True)
     
-    # 100% 가로 분할 독립 버튼 상단 네비게이션
-    nav_cols = st.columns(6)
-    tabs_list = ["기록", "타이머", "피드", "달력", "팔로우", "프로필"]
-    
-    for idx, t_name in enumerate(tabs_list):
-        with nav_cols[idx]:
-            is_active = (st.session_state.active_tab == t_name)
-            btn_label = f"• {t_name}" if is_active else t_name
-            if st.button(btn_label, key=f"nav_btn_{t_name}"):
-                st.session_state.active_tab = t_name
-                st.rerun()
+    tab_workout, tab_timer, tab_feed, tab_calendar, tab_friends, tab_profile = st.tabs([
+        "기록", "타이머", "피드", "달력", "팔로우", "프로필"
+    ])
 
     workouts_df = load_workouts()
     
     # TAB 1: 운동 기록 작성
-    if st.session_state.active_tab == "기록":
+    with tab_workout:
         st.subheader("오늘의 운동")
         today_date = st.date_input("운동 날짜", datetime.now())
         
-        routine_options = ["선택 안함", "가슴/삼두 DAY", "등/이두 DAY", "하체/복근 DAY", "어깨/유산소 DAY", "자율 운동"]
-        routine_type = st.selectbox("루틴 선택", routine_options)
+        routine_options = [
+            "선택 안함", 
+            "가슴 전체 DAY", "윗가슴 집중 DAY", 
+            "등 전체 DAY", "등 너비(수직) 집중 DAY", "등 두께(수평) 집중 DAY", 
+            "하체/복근 DAY", "어깨 입체감 DAY", "자율 운동"
+        ]
+        routine_type = st.selectbox("루틴 및 타겟 선택", routine_options)
         
         selected_exercises = []
-        if routine_type in ["가슴/삼두 DAY", "등/이두 DAY", "하체/복근 DAY", "어깨/유산소 DAY"]:
+        if routine_type != "선택 안함" and routine_type != "자율 운동":
             if "random_routine" not in st.session_state or st.session_state.get("current_routine_type") != routine_type:
-                st.session_state.random_routine = generate_dynamic_routine(routine_type)
+                st.session_state.random_routine = generate_anatomical_routine(routine_type)
                 st.session_state.current_routine_type = routine_type
                 
             col_rec1, col_rec2 = st.columns([3, 1])
-            with col_rec1: st.info(f"💡 **[{routine_type}]** 추천 조합")
+            with col_rec1: st.info(f"💡 **[{routine_type}]** 해부학적 유기적 추천 조합")
             with col_rec2:
                 if st.button("🎲 재추천"):
-                    st.session_state.random_routine = generate_dynamic_routine(routine_type)
+                    st.session_state.random_routine = generate_anatomical_routine(routine_type)
                     st.rerun()
                     
             selected_exercises = st.multiselect("종목 구성", options=ALL_EXERCISES, default=st.session_state.random_routine)
@@ -418,7 +530,7 @@ else:
                 st.success("성공적으로 저장되었습니다!")
 
     # TAB 2: 휴식 타이머
-    elif st.session_state.active_tab == "타이머":
+    with tab_timer:
         st.subheader("⏱️ 휴식 타이머")
         
         t_cols = st.columns(4)
@@ -458,7 +570,7 @@ else:
                 st.session_state.timer_running = False
 
     # TAB 3: 팔로우 피드
-    elif st.session_state.active_tab == "피드":
+    with tab_feed:
         st.subheader("📱 팔로워 피드")
         follows_df = load_follows()
         my_followings = follows_df[follows_df["follower_id"] == st.session_state.user_id]["following_id"].tolist()
@@ -503,7 +615,7 @@ else:
             st.info("기록이 없습니다.")
 
     # TAB 4: 팔로워 출석 달력
-    elif st.session_state.active_tab == "달력":
+    with tab_calendar:
         st.subheader("📅 출석 달력")
         follows_df = load_follows()
         my_followings = follows_df[follows_df["follower_id"] == st.session_state.user_id]["following_id"].tolist()
@@ -532,7 +644,7 @@ else:
             st.info("표시할 데이터가 없습니다.")
 
     # TAB 5: 친구 찾기 & 팔로우
-    elif st.session_state.active_tab == "팔로우":
+    with tab_friends:
         st.subheader("👥 팔로우 관리")
         users_df = load_users()
         follows_df = load_follows()
@@ -584,7 +696,7 @@ else:
             st.caption("팔로우 중인 친구가 없습니다.")
 
     # TAB 6: 프로필 관리 & 리포트
-    elif st.session_state.active_tab == "프로필":
+    with tab_profile:
         st.subheader("⚙️ 프로필 관리 & 리포트")
         users_df = load_users()
         user_idx = users_df[users_df["user_id"] == st.session_state.user_id].index
